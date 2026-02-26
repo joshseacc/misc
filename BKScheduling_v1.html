@@ -1,0 +1,778 @@
+import React, { useState, useMemo } from 'react';
+import { 
+  Calendar, Users, Music, CheckCircle, Clock, MapPin, 
+  AlertCircle, Plus, ChevronRight, UserCircle, Edit3, Trash2,
+  DollarSign, Receipt, PlusCircle
+} from 'lucide-react';
+
+// --- Mock Data & Initial State ---
+const KIDS = ["Joshua", "Lewis", "Cayden", "Jayden", "Clinton"];
+const VENUES = ["旺景", "Brio Kidz Studio"];
+const ROLES = ["經理人", ...KIDS.map(k => `小朋友-${k}`), "林sir"];
+
+const INITIAL_POLLS = [
+  {
+    id: 1,
+    title: "4月份春季音樂會加練",
+    type: "表演加練",
+    proposedDates: ["2026-04-10 (五) 16:00", "2026-04-11 (六) 10:00", "2026-04-12 (日) 14:00"],
+    votes: {
+      "Joshua": ["2026-04-10 (五) 16:00", "2026-04-11 (六) 10:00"],
+      "Lewis": ["2026-04-11 (六) 10:00"],
+      "Cayden": ["2026-04-10 (五) 16:00", "2026-04-11 (六) 10:00", "2026-04-12 (日) 14:00"]
+    }, // Jayden, Clinton 未投票
+    repertoire: "1. Star Wars Theme\n2. Let it Go",
+    finalDate: null,
+    venue: null,
+    status: "收集小朋友意向", 
+  },
+  {
+    id: 2,
+    title: "3月份第2週恆常排練",
+    type: "恆常排練",
+    proposedDates: ["2026-03-14 (六) 14:00", "2026-03-15 (日) 10:00"],
+    votes: {
+      "Joshua": ["2026-03-14 (六) 14:00"],
+      "Lewis": ["2026-03-14 (六) 14:00"],
+      "Cayden": ["2026-03-14 (六) 14:00"],
+      "Jayden": ["2026-03-14 (六) 14:00"],
+      "Clinton": ["2026-03-14 (六) 14:00", "2026-03-15 (日) 10:00"]
+    },
+    repertoire: "基礎音階練習\nDisney Medley",
+    finalDate: "2026-03-14 (六) 14:00",
+    venue: "旺景",
+    status: "已落實",
+  },
+  {
+    id: 3,
+    title: "3月份第1週恆常排練",
+    type: "恆常排練",
+    proposedDates: ["2026-03-07 (六) 14:00"],
+    votes: { "Joshua": ["2026-03-07 (六) 14:00"], "Lewis": ["2026-03-07 (六) 14:00"], "Cayden": ["2026-03-07 (六) 14:00"], "Jayden": ["2026-03-07 (六) 14:00"], "Clinton": ["2026-03-07 (六) 14:00"] },
+    repertoire: "Chorale",
+    finalDate: "2026-03-07 (六) 14:00",
+    venue: "Brio Kidz Studio",
+    status: "已落實",
+  }
+];
+
+const INITIAL_BUSY_DATES = [
+  { id: 1, kid: "Joshua", reason: "學校呈分試", dateStr: "2026-03-20 至 2026-03-25" },
+  { id: 2, kid: "Jayden", reason: "家族旅行", dateStr: "2026-04-01 至 2026-04-05" }
+];
+
+// 雙月收費記錄 (1/3/5/7/9/11月發出)
+const INITIAL_BILLING = [
+  {
+    id: "2026-03",
+    periodName: "2026年 3-4月",
+    baseFee: 250, // 每堂學費
+    students: {
+      "Joshua": { classes: 8, extra: [{ id: 1, desc: "新樂譜影印", amount: 20 }], isPaid: false },
+      "Lewis": { classes: 8, extra: [], isPaid: true },
+      "Cayden": { classes: 7, extra: [{ id: 2, desc: "號角油", amount: 60 }], isPaid: false }, // 請假一堂
+      "Jayden": { classes: 8, extra: [], isPaid: false },
+      "Clinton": { classes: 8, extra: [], isPaid: false },
+    }
+  }
+];
+
+export default function App() {
+  const [currentRole, setCurrentRole] = useState("經理人");
+  const [activeTab, setActiveTab] = useState('schedule'); // 'schedule', 'tuition'
+  const [view, setView] = useState('dashboard'); // schedule views: 'dashboard', 'create_poll', 'poll_detail'
+  
+  const [polls, setPolls] = useState(INITIAL_POLLS);
+  const [busyDates, setBusyDates] = useState(INITIAL_BUSY_DATES);
+  const [billingCycles, setBillingCycles] = useState(INITIAL_BILLING);
+  
+  const [selectedPollId, setSelectedPollId] = useState(null);
+  const selectedPoll = polls.find(p => p.id === selectedPollId);
+
+  // --- Handlers for Schedule ---
+  const handleVote = (pollId, kidName, selectedDates) => {
+    setPolls(polls.map(p => p.id === pollId ? { ...p, votes: { ...p.votes, [kidName]: selectedDates } } : p));
+  };
+  const handleUpdateRepertoire = (pollId, newRepertoire) => {
+    setPolls(polls.map(p => p.id === pollId ? { ...p, repertoire: newRepertoire } : p));
+  };
+  const handleSendToTeacher = (pollId, finalDate, venue) => {
+    setPolls(polls.map(p => p.id === pollId ? { ...p, finalDate, venue, status: "待林sir回覆" } : p));
+    setView('dashboard');
+  };
+  const handleTeacherReply = (pollId, isApproved) => {
+    setPolls(polls.map(p => p.id === pollId ? { ...p, status: isApproved ? "已落實" : "收集小朋友意向", finalDate: isApproved ? p.finalDate : null, venue: isApproved ? p.venue : null } : p));
+    setView('dashboard');
+  };
+  const handleCreatePoll = (newPoll) => {
+    setPolls([{ ...newPoll, id: Date.now() }, ...polls]);
+    setView('dashboard');
+  };
+  const handleAddBusyDate = (kid, reason, dateStr) => {
+    setBusyDates([...busyDates, { id: Date.now(), kid, reason, dateStr }]);
+  };
+  const handleDeleteBusyDate = (id) => {
+    setBusyDates(busyDates.filter(b => b.id !== id));
+  };
+
+  // --- Handlers for Tuition ---
+  const togglePaidStatus = (cycleId, kidName) => {
+    setBillingCycles(cycles => cycles.map(c => {
+      if (c.id === cycleId) {
+        return {
+          ...c,
+          students: { ...c.students, [kidName]: { ...c.students[kidName], isPaid: !c.students[kidName].isPaid } }
+        };
+      }
+      return c;
+    }));
+  };
+
+  const addExtraFee = (cycleId, kidName, desc, amount) => {
+    setBillingCycles(cycles => cycles.map(c => {
+      if (c.id === cycleId) {
+        const kidData = c.students[kidName];
+        return {
+          ...c,
+          students: {
+            ...c.students,
+            [kidName]: { 
+              ...kidData, 
+              extra: [...kidData.extra, { id: Date.now(), desc, amount: Number(amount) }] 
+            }
+          }
+        };
+      }
+      return c;
+    }));
+  };
+
+  const removeExtraFee = (cycleId, kidName, extraId) => {
+    setBillingCycles(cycles => cycles.map(c => {
+      if (c.id === cycleId) {
+        const kidData = c.students[kidName];
+        return {
+          ...c,
+          students: { ...c.students, [kidName]: { ...kidData, extra: kidData.extra.filter(e => e.id !== extraId) } }
+        };
+      }
+      return c;
+    }));
+  };
+
+  const updateClassesCount = (cycleId, kidName, newCount) => {
+    setBillingCycles(cycles => cycles.map(c => {
+      if (c.id === cycleId) {
+        return {
+          ...c,
+          students: { ...c.students, [kidName]: { ...c.students[kidName], classes: Number(newCount) } }
+        };
+      }
+      return c;
+    }));
+  };
+
+  // --- Roles context ---
+  const isManager = currentRole === "經理人";
+  const isTeacher = currentRole === "林sir";
+  const isKid = currentRole.startsWith("小朋友-");
+  const kidName = isKid ? currentRole.replace("小朋友-", "") : "";
+
+  // --- Components ---
+  const Header = () => (
+    <header className="bg-amber-500 text-white shadow-md sticky top-0 z-20">
+      <div className="p-4 flex justify-between items-center">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => { setActiveTab('schedule'); setView('dashboard'); }}>
+          <Music size={28} />
+          <h1 className="text-2xl font-bold tracking-wider hidden sm:block">Brio Kidz</h1>
+        </div>
+        
+        {/* Tab Navigation */}
+        <div className="flex bg-amber-600 rounded-lg p-1">
+          <button 
+            onClick={() => { setActiveTab('schedule'); setView('dashboard'); }}
+            className={`px-4 py-1.5 rounded-md text-sm font-bold flex items-center gap-1 transition ${activeTab === 'schedule' ? 'bg-white text-amber-600 shadow' : 'text-amber-100 hover:bg-amber-500'}`}
+          >
+            <Calendar size={16}/> 排練日程
+          </button>
+          <button 
+            onClick={() => setActiveTab('tuition')}
+            className={`px-4 py-1.5 rounded-md text-sm font-bold flex items-center gap-1 transition ${activeTab === 'tuition' ? 'bg-white text-amber-600 shadow' : 'text-amber-100 hover:bg-amber-500'}`}
+          >
+            <DollarSign size={16}/> 學費管理
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <UserCircle size={20} className="hidden sm:block" />
+          <select 
+            className="bg-amber-700 text-white border-none rounded p-1.5 text-sm font-medium focus:ring-2 focus:ring-amber-300 outline-none"
+            value={currentRole}
+            onChange={(e) => { setCurrentRole(e.target.value); setView('dashboard'); }}
+          >
+            {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+        </div>
+      </div>
+    </header>
+  );
+
+  // --- Tuition Dashboard Component ---
+  const TuitionDashboard = () => {
+    const [currentCycleId, setCurrentCycleId] = useState(billingCycles[0]?.id);
+    const [addingExtraFor, setAddingExtraFor] = useState(null); // kidName
+    const [extraDesc, setExtraDesc] = useState('');
+    const [extraAmount, setExtraAmount] = useState('');
+
+    const cycle = billingCycles.find(c => c.id === currentCycleId);
+    if (!cycle) return <div className="p-8 text-center text-gray-500">暫無學費記錄</div>;
+
+    // 找出已落實的排練作為上堂記錄 (這裡簡易化為全部已落實的排練)
+    const confirmedClasses = polls.filter(p => p.status === "已落實");
+
+    const handleAddExtraSubmit = (e) => {
+      e.preventDefault();
+      if (extraDesc && extraAmount) {
+        addExtraFee(currentCycleId, addingExtraFor, extraDesc, extraAmount);
+        setAddingExtraFor(null);
+        setExtraDesc('');
+        setExtraAmount('');
+      }
+    };
+
+    return (
+      <div className="p-4 max-w-5xl mx-auto space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <Receipt className="text-amber-500" /> 學費及帳單紀錄
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">每逢單數月 (1/3/5/7/9/11月) 結算兩個月學費</p>
+          </div>
+          <select 
+            className="border p-2 rounded-lg font-bold text-gray-700 bg-white shadow-sm outline-none focus:ring-2 focus:ring-amber-400"
+            value={currentCycleId}
+            onChange={e => setCurrentCycleId(e.target.value)}
+          >
+            {billingCycles.map(c => <option key={c.id} value={c.id}>{c.periodName}</option>)}
+          </select>
+        </div>
+
+        {/* 顯示最近上堂紀錄供參考 */}
+        <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl shadow-sm">
+          <h3 className="font-bold text-blue-800 mb-2 flex items-center gap-2"><Clock size={18}/> 系統已落實排練紀錄 (供結算參考)</h3>
+          <div className="flex flex-wrap gap-2">
+            {confirmedClasses.map(cls => (
+              <span key={cls.id} className="bg-white border border-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                <Calendar size={12}/> {cls.finalDate.split(' ')[0]} - {cls.title}
+              </span>
+            ))}
+            {confirmedClasses.length === 0 && <span className="text-sm text-blue-500">暫無已落實紀錄</span>}
+          </div>
+        </div>
+
+        {/* Manager View: Full Table */}
+        {(isManager || isTeacher) && (
+          <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
+            <div className="p-4 bg-gray-50 border-b flex justify-between items-center">
+              <h3 className="font-bold text-gray-700">{cycle.periodName} 收費明細 (每堂 ${cycle.baseFee})</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-gray-100 border-b text-gray-600">
+                  <tr>
+                    <th className="p-3 font-bold">小朋友</th>
+                    <th className="p-3 font-bold text-center">預計堂數</th>
+                    <th className="p-3 font-bold text-right">學費小計</th>
+                    <th className="p-3 font-bold">其他收費項目</th>
+                    <th className="p-3 font-bold text-right text-amber-700">總應付</th>
+                    <th className="p-3 font-bold text-center">繳費狀態</th>
+                    <th className="p-3 font-bold text-center">操作</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {KIDS.map(kid => {
+                    const data = cycle.students[kid];
+                    const tuitionSubtotal = data.classes * cycle.baseFee;
+                    const extraTotal = data.extra.reduce((sum, item) => sum + item.amount, 0);
+                    const grandTotal = tuitionSubtotal + extraTotal;
+
+                    return (
+                      <React.Fragment key={kid}>
+                        <tr className="hover:bg-gray-50 transition">
+                          <td className="p-3 font-bold text-gray-800">{kid}</td>
+                          <td className="p-3 text-center">
+                            {isManager ? (
+                              <input 
+                                type="number" 
+                                className="w-16 border rounded text-center p-1 outline-none focus:ring-1 focus:ring-amber-400"
+                                value={data.classes}
+                                onChange={e => updateClassesCount(cycle.id, kid, e.target.value)}
+                                min="0"
+                              />
+                            ) : data.classes}
+                          </td>
+                          <td className="p-3 text-right text-gray-600">${tuitionSubtotal}</td>
+                          <td className="p-3">
+                            <div className="space-y-1">
+                              {data.extra.map(item => (
+                                <div key={item.id} className="text-xs bg-gray-100 px-2 py-1 rounded flex justify-between items-center group">
+                                  <span>{item.desc}: ${item.amount}</span>
+                                  {isManager && (
+                                    <button onClick={() => removeExtraFee(cycle.id, kid, item.id)} className="text-red-400 opacity-0 group-hover:opacity-100 hover:text-red-600">
+                                      <Trash2 size={12}/>
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                              {data.extra.length === 0 && <span className="text-xs text-gray-400">-</span>}
+                            </div>
+                          </td>
+                          <td className="p-3 text-right font-bold text-lg text-amber-700">${grandTotal}</td>
+                          <td className="p-3 text-center">
+                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${data.isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                              {data.isPaid ? '已繳交' : '未繳交'}
+                            </span>
+                          </td>
+                          <td className="p-3 text-center">
+                            {isManager && (
+                              <div className="flex items-center justify-center gap-2">
+                                <button 
+                                  onClick={() => setAddingExtraFor(addingExtraFor === kid ? null : kid)}
+                                  className="text-blue-600 hover:text-blue-800 text-xs font-medium flex items-center gap-1"
+                                >
+                                  <PlusCircle size={14}/> 加項目
+                                </button>
+                                <button 
+                                  onClick={() => togglePaidStatus(cycle.id, kid)}
+                                  className={`text-xs px-2 py-1 rounded border font-medium transition ${data.isPaid ? 'border-gray-300 text-gray-600 hover:bg-gray-100' : 'border-green-500 text-green-600 hover:bg-green-50'}`}
+                                >
+                                  {data.isPaid ? '標示未交' : '標示已交'}
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                        {/* Inline Add Extra Form */}
+                        {addingExtraFor === kid && (
+                          <tr className="bg-blue-50/50">
+                            <td colSpan={7} className="p-3">
+                              <form onSubmit={handleAddExtraSubmit} className="flex gap-2 items-center justify-end">
+                                <span className="text-sm font-bold text-blue-800">新增收費給 {kid}:</span>
+                                <input required placeholder="項目名稱 (例: 買樂譜)" className="border rounded p-1 text-sm outline-none" value={extraDesc} onChange={e=>setExtraDesc(e.target.value)} />
+                                <input required type="number" placeholder="金額 $" className="border rounded p-1 text-sm w-24 outline-none" value={extraAmount} onChange={e=>setExtraAmount(e.target.value)} />
+                                <button type="submit" className="bg-blue-600 text-white text-sm px-3 py-1 rounded hover:bg-blue-700">儲存</button>
+                                <button type="button" onClick={()=>setAddingExtraFor(null)} className="text-gray-500 text-sm px-2">取消</button>
+                              </form>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Kid View: Personal Card */}
+        {isKid && (
+          <div className="bg-white border rounded-xl p-6 shadow-sm max-w-md mx-auto mt-8">
+            <h3 className="text-xl font-bold text-gray-800 text-center mb-6">{kidName} 的學費單 ({cycle.periodName})</h3>
+            
+            <div className="space-y-4">
+              <div className="flex justify-between items-center pb-2 border-b border-dashed">
+                <span className="text-gray-600">基本學費 ({cycle.students[kidName].classes}堂 @ ${cycle.baseFee})</span>
+                <span className="font-bold text-gray-800">${cycle.students[kidName].classes * cycle.baseFee}</span>
+              </div>
+              
+              {cycle.students[kidName].extra.length > 0 && (
+                <div className="pb-2 border-b border-dashed">
+                  <span className="text-gray-600 block mb-1">其他收費項目：</span>
+                  {cycle.students[kidName].extra.map(item => (
+                    <div key={item.id} className="flex justify-between items-center text-sm pl-4 text-gray-700 mb-1">
+                      <span>• {item.desc}</span>
+                      <span>${item.amount}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <div className="flex justify-between items-center pt-2">
+                <span className="text-lg font-bold text-amber-700">總應付金額</span>
+                <span className="text-2xl font-black text-amber-700">
+                  ${(cycle.students[kidName].classes * cycle.baseFee) + cycle.students[kidName].extra.reduce((sum, item) => sum + item.amount, 0)}
+                </span>
+              </div>
+            </div>
+
+            <div className={`mt-8 py-3 rounded-lg text-center font-bold text-lg ${cycle.students[kidName].isPaid ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-50 text-red-600 border border-red-200'}`}>
+              {cycle.students[kidName].isPaid ? (
+                <span className="flex items-center justify-center gap-2"><CheckCircle/> 經理人已確認收款，謝謝！</span>
+              ) : (
+                <span className="flex items-center justify-center gap-2"><AlertCircle/> 尚待繳交</span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // --- Schedule Dashboard Component ---
+  const Dashboard = () => {
+    return (
+      <div className="p-4 max-w-4xl mx-auto space-y-6">
+        {isManager && (
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded shadow-sm">
+            <h2 className="font-bold text-blue-800 flex items-center gap-2 mb-2">
+              <AlertCircle size={20} /> 經理人日程摘要
+            </h2>
+            <ul className="text-sm text-blue-700 space-y-1">
+              {polls.filter(p => p.status === "收集小朋友意向").map(p => {
+                const missing = KIDS.filter(k => !p.votes[k]);
+                return (
+                  <li key={p.id}>
+                    • <strong>{p.title}</strong> 尚欠投票：
+                    <span className="text-red-600 font-medium ml-1">
+                      {missing.length > 0 ? missing.join(", ") : "全部已投，可交給林sir確認！"}
+                    </span>
+                  </li>
+                );
+              })}
+              {polls.filter(p => p.status === "待林sir回覆").map(p => (
+                <li key={p.id}>• <strong>{p.title}</strong> 正等待林sir回覆。</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {isKid && (
+          <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded shadow-sm">
+            <h2 className="font-bold text-green-800 flex items-center gap-2 mb-4">
+              <Calendar size={20} /> 我的請假 / 唔得閒紀錄
+            </h2>
+            <div className="space-y-2 mb-4">
+              {busyDates.filter(b => b.kid === kidName).map(b => (
+                <div key={b.id} className="flex justify-between items-center bg-white p-2 rounded border border-green-100 text-sm">
+                  <span><strong className="text-green-700">{b.dateStr}</strong> - {b.reason}</span>
+                  <button onClick={() => handleDeleteBusyDate(b.id)} className="text-red-400 hover:text-red-600"><Trash2 size={16}/></button>
+                </div>
+              ))}
+              {busyDates.filter(b => b.kid === kidName).length === 0 && (
+                <p className="text-sm text-gray-500">暫無請假紀錄。</p>
+              )}
+            </div>
+            
+            <form 
+              className="flex gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleAddBusyDate(kidName, e.target.reason.value, e.target.dateStr.value);
+                e.target.reset();
+              }}
+            >
+              <input name="dateStr" placeholder="日期 (例: 5月1-3日)" className="border p-2 rounded text-sm flex-1" required />
+              <input name="reason" placeholder="原因 (例: 考試)" className="border p-2 rounded text-sm flex-1" required />
+              <button type="submit" className="bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700">新增</button>
+            </form>
+          </div>
+        )}
+
+        <div className="flex justify-between items-end">
+          <h2 className="text-xl font-bold text-gray-800">所有排練日程</h2>
+          {isManager && (
+            <button 
+              onClick={() => setView('create_poll')}
+              className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 shadow transition"
+            >
+              <Plus size={18} /> 新增排期
+            </button>
+          )}
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {polls.map(poll => {
+            let statusColor = "bg-gray-100 text-gray-800";
+            if (poll.status === "收集小朋友意向") statusColor = "bg-blue-100 text-blue-800 border-blue-200";
+            if (poll.status === "待林sir回覆") statusColor = "bg-purple-100 text-purple-800 border-purple-200";
+            if (poll.status === "已落實") statusColor = "bg-green-100 text-green-800 border-green-200";
+
+            const votedCount = Object.keys(poll.votes).length;
+            const needsAction = 
+              (isManager && poll.status === "收集小朋友意向") ||
+              (isKid && poll.status === "收集小朋友意向" && !poll.votes[kidName]) ||
+              (isTeacher && poll.status === "待林sir回覆");
+
+            return (
+              <div 
+                key={poll.id} 
+                className={`bg-white border rounded-xl p-4 shadow-sm hover:shadow-md transition cursor-pointer flex flex-col justify-between ${needsAction ? 'ring-2 ring-amber-400 ring-offset-1' : ''}`}
+                onClick={() => { setSelectedPollId(poll.id); setView('poll_detail'); }}
+              >
+                <div>
+                  <div className="flex justify-between items-start mb-2">
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium border ${statusColor}`}>
+                      {poll.status}
+                    </span>
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">{poll.type}</span>
+                  </div>
+                  <h3 className="font-bold text-lg text-gray-800 mb-1">{poll.title}</h3>
+                  
+                  {poll.status === "已落實" ? (
+                    <div className="text-sm text-gray-600 mt-2 space-y-1">
+                      <p className="flex items-center gap-1 text-green-700 font-medium"><Calendar size={14} /> {poll.finalDate}</p>
+                      <p className="flex items-center gap-1"><MapPin size={14} /> {poll.venue}</p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 mt-2 flex items-center gap-1">
+                      <Users size={14} /> 投票進度: {votedCount} / {KIDS.length} 人
+                    </p>
+                  )}
+                </div>
+                
+                <div className="mt-4 pt-3 border-t flex justify-between items-center text-sm font-medium text-amber-600">
+                  <span>查看詳情 {needsAction && " (需要操作)"}</span>
+                  <ChevronRight size={16} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const CreatePoll = () => {
+    const [title, setTitle] = useState('');
+    const [type, setType] = useState('恆常排練');
+    const [dates, setDates] = useState(['']);
+
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      const validDates = dates.filter(d => d.trim() !== '');
+      if (validDates.length === 0) return alert('請最少提供一個日期！');
+      handleCreatePoll({ title, type, proposedDates: validDates, votes: {}, repertoire: '', finalDate: null, venue: null, status: '收集小朋友意向' });
+    };
+
+    return (
+      <div className="p-4 max-w-2xl mx-auto">
+        <button onClick={() => setView('dashboard')} className="text-amber-600 font-medium mb-4 flex items-center gap-1 hover:underline">
+          &larr; 返回首頁
+        </button>
+        <div className="bg-white p-6 rounded-xl shadow-sm border">
+          <h2 className="text-2xl font-bold mb-6 text-gray-800 border-b pb-2">新增排期投票</h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">排練名稱</label>
+              <input required value={title} onChange={e=>setTitle(e.target.value)} className="w-full border p-2 rounded focus:ring-2 focus:ring-amber-300 outline-none" placeholder="例: 5月份大匯演加練" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">類別</label>
+              <select value={type} onChange={e=>setType(e.target.value)} className="w-full border p-2 rounded focus:ring-2 focus:ring-amber-300 outline-none">
+                <option>恆常排練</option>
+                <option>表演加練</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">提供選項 (日期及時間)</label>
+              {dates.map((d, i) => (
+                <div key={i} className="flex gap-2 mb-2">
+                  <input value={d} onChange={e => { const newDates = [...dates]; newDates[i] = e.target.value; setDates(newDates); }} className="flex-1 border p-2 rounded focus:ring-2 focus:ring-amber-300 outline-none" placeholder="例: 2026-05-10 (六) 14:00" />
+                  {i === dates.length - 1 && (
+                    <button type="button" onClick={() => setDates([...dates, ''])} className="bg-gray-100 px-3 rounded hover:bg-gray-200"><Plus size={20}/></button>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            <div className="bg-yellow-50 p-3 rounded text-sm text-yellow-800 border border-yellow-200">
+              <p className="font-bold flex items-center gap-1 mb-1"><AlertCircle size={16}/> 溫馨提示：小朋友近期唔得閒日子</p>
+              <ul className="list-disc pl-5">
+                {busyDates.map(b => <li key={b.id}>{b.kid}: {b.dateStr} ({b.reason})</li>)}
+              </ul>
+            </div>
+
+            <button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-lg font-bold text-lg mt-6 shadow-md transition">
+              發佈投票
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
+  const PollDetail = () => {
+    if (!selectedPoll) return null;
+    const [kidVotes, setKidVotes] = useState(selectedPoll.votes[kidName] || []);
+    const [repInput, setRepInput] = useState(selectedPoll.repertoire);
+    const [isEditingRep, setIsEditingRep] = useState(false);
+    const [finalDate, setFinalDate] = useState(selectedPoll.proposedDates[0] || '');
+    const [venue, setVenue] = useState(VENUES[0]);
+
+    const missingVoters = KIDS.filter(k => !selectedPoll.votes[k]);
+
+    const handleKidSubmitVote = () => { handleVote(selectedPoll.id, kidName, kidVotes); alert("投票成功！"); };
+    const toggleKidVote = (date) => { if (kidVotes.includes(date)) setKidVotes(kidVotes.filter(d => d !== date)); else setKidVotes([...kidVotes, date]); };
+    const saveRepertoire = () => { handleUpdateRepertoire(selectedPoll.id, repInput); setIsEditingRep(false); };
+
+    return (
+      <div className="p-4 max-w-3xl mx-auto space-y-6">
+        <button onClick={() => setView('dashboard')} className="text-amber-600 font-medium flex items-center gap-1 hover:underline">
+          &larr; 返回首頁
+        </button>
+
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded mb-2 inline-block">{selectedPoll.type}</span>
+              <h2 className="text-2xl font-bold text-gray-800">{selectedPoll.title}</h2>
+            </div>
+            <span className={`px-3 py-1 rounded-full text-sm font-bold border ${selectedPoll.status === '已落實' ? 'bg-green-100 text-green-700 border-green-200' : selectedPoll.status === '待林sir回覆' ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-blue-100 text-blue-700 border-blue-200'}`}>
+              {selectedPoll.status}
+            </span>
+          </div>
+
+          {selectedPoll.status === "已落實" && (
+            <div className="bg-green-50 border border-green-200 p-4 rounded-lg mt-4 text-green-900">
+              <h3 className="font-bold flex items-center gap-2 mb-2"><CheckCircle size={20}/> 排練已落實！</h3>
+              <p className="flex items-center gap-2 text-lg"><Calendar size={18}/> 日期：{selectedPoll.finalDate}</p>
+              <p className="flex items-center gap-2 text-lg"><MapPin size={18}/> 場地：{selectedPoll.venue}</p>
+            </div>
+          )}
+
+          <div className="mt-6 border-t pt-4">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-bold text-gray-700 flex items-center gap-2"><Music size={18}/> 排練樂曲</h3>
+              {(isManager || isTeacher) && !isEditingRep && (
+                <button onClick={() => setIsEditingRep(true)} className="text-sm text-blue-600 flex items-center gap-1 hover:underline"><Edit3 size={14}/> 編輯</button>
+              )}
+            </div>
+            {isEditingRep ? (
+              <div className="space-y-2">
+                <textarea className="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-amber-300 outline-none min-h-[100px]" value={repInput} onChange={e => setRepInput(e.target.value)} placeholder="請輸入樂曲清單..." />
+                <div className="flex justify-end gap-2">
+                  <button onClick={() => setIsEditingRep(false)} className="text-gray-500 text-sm px-3 py-1">取消</button>
+                  <button onClick={saveRepertoire} className="bg-blue-600 text-white text-sm px-4 py-1 rounded hover:bg-blue-700">儲存</button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-50 p-3 rounded text-sm whitespace-pre-wrap text-gray-700 border">{selectedPoll.repertoire || "尚未填寫樂曲。"}</div>
+            )}
+          </div>
+        </div>
+
+        {isKid && selectedPoll.status === "收集小朋友意向" && (
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <h3 className="font-bold text-lg mb-4 text-gray-800">請選擇你可以出席的時間 (可多選)：</h3>
+            <div className="space-y-3 mb-6">
+              {selectedPoll.proposedDates.map(date => (
+                <label key={date} className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition ${kidVotes.includes(date) ? 'bg-amber-50 border-amber-400' : 'hover:bg-gray-50'}`}>
+                  <input type="checkbox" className="w-5 h-5 text-amber-500 rounded" checked={kidVotes.includes(date)} onChange={() => toggleKidVote(date)} />
+                  <span className={kidVotes.includes(date) ? 'font-bold text-amber-900' : 'text-gray-700'}>{date}</span>
+                </label>
+              ))}
+            </div>
+            <button onClick={handleKidSubmitVote} className="w-full bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-lg font-bold text-lg shadow-md transition">提交我的意向</button>
+          </div>
+        )}
+
+        {isManager && selectedPoll.status === "收集小朋友意向" && (
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-6">
+            <div>
+              <h3 className="font-bold text-lg mb-3 flex items-center gap-2"><Users size={18}/> 投票進度</h3>
+              {missingVoters.length > 0 ? (
+                <div className="p-3 bg-red-50 text-red-700 rounded mb-4 border border-red-200 text-sm flex items-start gap-2">
+                  <AlertCircle size={16} className="mt-0.5 flex-shrink-0"/> 
+                  <div><span className="font-bold">尚欠以下小朋友投票：</span><p className="mt-1">{missingVoters.join(", ")}</p></div>
+                </div>
+              ) : (
+                <div className="p-3 bg-green-50 text-green-700 rounded mb-4 border border-green-200 text-sm font-bold flex items-center gap-2"><CheckCircle size={16}/> 所有小朋友已完成投票！</div>
+              )}
+              <div className="overflow-x-auto border rounded-lg">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-gray-50 border-b"><tr><th className="p-3 font-medium text-gray-600">日期選項</th><th className="p-3 font-medium text-gray-600">得票數</th><th className="p-3 font-medium text-gray-600">可出席名單</th></tr></thead>
+                  <tbody>
+                    {selectedPoll.proposedDates.map(date => {
+                      const availableKids = KIDS.filter(k => selectedPoll.votes[k]?.includes(date));
+                      return (
+                        <tr key={date} className="border-b last:border-0 hover:bg-gray-50">
+                          <td className="p-3 font-medium">{date}</td>
+                          <td className="p-3"><span className="bg-blue-100 text-blue-800 py-1 px-2 rounded-full font-bold">{availableKids.length} / {KIDS.length}</span></td>
+                          <td className="p-3 text-gray-600">{availableKids.length > 0 ? availableKids.join(", ") : "-"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+              <h3 className="font-bold text-amber-900 mb-4 flex items-center gap-2"><CheckCircle size={18}/> 經理人決策：提交給林sir</h3>
+              <div className="grid gap-4 md:grid-cols-2 mb-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">決定最終日期</label>
+                  <select value={finalDate} onChange={e=>setFinalDate(e.target.value)} className="w-full border p-2 rounded focus:ring-2 focus:ring-amber-400 outline-none">
+                    {selectedPoll.proposedDates.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">安排場地</label>
+                  <select value={venue} onChange={e=>setVenue(e.target.value)} className="w-full border p-2 rounded focus:ring-2 focus:ring-amber-400 outline-none">
+                    {VENUES.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                </div>
+              </div>
+              <button onClick={() => handleSendToTeacher(selectedPoll.id, finalDate, venue)} className="w-full bg-amber-600 hover:bg-amber-700 text-white py-2 rounded font-bold shadow transition">選定日子並發送給林sir</button>
+            </div>
+          </div>
+        )}
+
+        {isTeacher && selectedPoll.status === "待林sir回覆" && (
+          <div className="bg-purple-50 p-6 rounded-xl shadow-sm border border-purple-200">
+            <h3 className="text-xl font-bold text-purple-900 mb-4 flex items-center gap-2"><Clock size={24}/> 等待您的確認</h3>
+            <p className="mb-2 text-purple-800">經理人已根據小朋友的意向選出以下排練時間，請問林sir能否出席？</p>
+            <div className="bg-white p-4 rounded-lg border border-purple-100 my-4">
+              <p className="flex items-center gap-2 text-lg font-bold text-gray-800 mb-2"><Calendar className="text-purple-500"/> {selectedPoll.finalDate}</p>
+              <p className="flex items-center gap-2 text-gray-600 mb-4"><MapPin className="text-purple-500"/> {selectedPoll.venue}</p>
+              <div className="text-sm text-gray-500 border-t pt-2">
+                可出席小朋友 ({KIDS.filter(k => selectedPoll.votes[k]?.includes(selectedPoll.finalDate)).length}人): 
+                <span className="text-gray-700 font-medium ml-1">{KIDS.filter(k => selectedPoll.votes[k]?.includes(selectedPoll.finalDate)).join(", ")}</span>
+              </div>
+            </div>
+            <div className="flex gap-4 mt-6">
+              <button onClick={() => handleTeacherReply(selectedPoll.id, true)} className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold text-lg shadow transition flex items-center justify-center gap-2"><CheckCircle size={20}/> 我可以出席，落實！</button>
+              <button onClick={() => handleTeacherReply(selectedPoll.id, false)} className="flex-1 bg-white border-2 border-red-500 text-red-600 hover:bg-red-50 py-3 rounded-lg font-bold text-lg transition">唔得閒，需重新夾期</button>
+            </div>
+          </div>
+        )}
+        
+        {!isTeacher && selectedPoll.status === "待林sir回覆" && (
+          <div className="bg-gray-50 p-6 rounded-xl shadow-sm border border-gray-200 text-center">
+            <Clock size={48} className="mx-auto text-gray-400 mb-4" />
+            <h3 className="text-xl font-bold text-gray-700 mb-2">已提交給林sir</h3>
+            <p className="text-gray-500">正在等待林sir確認最終日子 ({selectedPoll.finalDate})。</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 font-sans text-gray-800 pb-10">
+      <Header />
+      <main>
+        {activeTab === 'schedule' && (
+          <>
+            {view === 'dashboard' && <Dashboard />}
+            {view === 'create_poll' && <CreatePoll />}
+            {view === 'poll_detail' && <PollDetail />}
+          </>
+        )}
+        {activeTab === 'tuition' && <TuitionDashboard />}
+      </main>
+    </div>
+  );
+}
