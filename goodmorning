@@ -1,0 +1,373 @@
+import React, { useState, useEffect } from 'react';
+import { Clock, Calendar, MapPin, Music, Heart, Quote, Sun, Cloud, CloudRain, CloudLightning, AlertCircle, Edit3, Check, Thermometer } from 'lucide-react';
+
+// --- 20句溫馨鼓勵語句 (雙語：英文 + 自然廣東話) ---
+const ENCOURAGEMENT_QUOTES = [
+  { en: "You are capable of amazing things!", zh: "你絕對可以做得到好叻嘅事！" },
+  { en: "Today is a great day to learn something new.", zh: "今日係學新嘢嘅好日子，加油！" },
+  { en: "Believe in yourself, we believe in you!", zh: "要相信自己，我哋都好信你㗎！" },
+  { en: "Your smile lights up our world.", zh: "你嘅笑容照亮咗我哋個世界。" },
+  { en: "Be kind, be brave, be exactly who you are.", zh: "做個善良、勇敢，做最真實嘅自己啦。" },
+  { en: "Every day is a fresh start to do your best.", zh: "每日都係新開始，盡力就得喇！" },
+  { en: "You make us proud every single day.", zh: "你每日都令我哋好驕傲！" },
+  { en: "Shine bright like the star you are.", zh: "好似星星咁閃耀啦！" },
+  { en: "Don't be afraid to make mistakes, they help you grow.", zh: "唔好驚犯錯，錯咗先會成長嘛。" },
+  { en: "You have a heart of gold, keep sharing it.", zh: "你有顆善良嘅心，繼續保持啦。" },
+  { en: "Dream big, work hard, and make it happen.", zh: "大膽夢想，努力實現佢！" },
+  { en: "Your imagination has absolutely no limits.", zh: "你嘅想像力係無窮無盡㗎。" },
+  { en: "Always remember how incredibly loved you are.", zh: "記住你係俾好多人愛錫緊㗎。" },
+  { en: "You are a wonderful friend and an amazing kid.", zh: "你係個好朋友，亦都係個好叻嘅細路。" },
+  { en: "Keep asking questions and stay curious today.", zh: "繼續發問，保持好奇心啦！" },
+  { en: "You can handle whatever today brings your way.", zh: "今日遇到咩事你都一定搞得掂！" },
+  { en: "Your positivity and joy are contagious!", zh: "你嘅樂觀同開心感染到所有人！" },
+  { en: "Take a deep breath, you've totally got this.", zh: "深呼吸，你一定得嘅！" },
+  { en: "We are your biggest fans, today and always.", zh: "我哋永遠都係你最大嘅粉絲！" },
+  { en: "Let's make today an awesome adventure!", zh: "今日一齊嚟個大冒險啦！" }
+];
+
+export default function App() {
+  // 狀態管理
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [countdown, setCountdown] = useState(null);
+  const [hasLeft, setHasLeft] = useState(false);
+  const [quoteOfTheDay, setQuoteOfTheDay] = useState(ENCOURAGEMENT_QUOTES[0]);
+  
+  // Spotify 狀態
+  const [playlistId, setPlaylistId] = useState(localStorage.getItem('family_spotify_playlist') || '37i9dQZF1DXc5e2bJhV6pu');
+  const [isEditingSpotify, setIsEditingSpotify] = useState(false);
+  const [spotifyInput, setSpotifyInput] = useState("");
+
+  // 天氣狀態
+  const [weather, setWeather] = useState({
+    iconIndex: null,
+    tuenMun: { temp: '--', status: '載入中...' },
+    kowloonTong: { temp: '--', status: '載入中...' },
+    isError: false
+  });
+
+  // 1. 時間與日期每秒更新
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // 2. 倒數計時邏輯 (每秒更新，目標 06:48)
+  useEffect(() => {
+    const calculateCountdown = () => {
+      const now = new Date();
+      const target = new Date();
+      target.setHours(6, 48, 0, 0);
+
+      const diff = target.getTime() - now.getTime();
+
+      if (diff <= 0) {
+        setHasLeft(true);
+      } else {
+        setHasLeft(false);
+        const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        const minutes = Math.floor((diff / 1000 / 60) % 60);
+        const seconds = Math.floor((diff / 1000) % 60);
+        setCountdown({ hours, minutes, seconds });
+      }
+    };
+
+    calculateCountdown();
+    const timer = setInterval(calculateCountdown, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // 3. 每日鼓勵語句 (依賴日期 DayOfYear)
+  useEffect(() => {
+    const today = new Date();
+    const start = new Date(today.getFullYear(), 0, 0);
+    const diff = today - start;
+    const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+    setQuoteOfTheDay(ENCOURAGEMENT_QUOTES[dayOfYear % ENCOURAGEMENT_QUOTES.length]);
+  }, []);
+
+  // 4. 香港天文台 API 獲取邏輯 (30分鐘刷新一次)
+  useEffect(() => {
+    const fetchWeather = async () => {
+      try {
+        const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc');
+        if (!res.ok) throw new Error('API request failed');
+        const data = await res.json();
+        
+        const temps = data.temperature.data;
+        // 天文台 icon 代碼
+        const iconIndex = data.icon[0]; 
+        
+        const tuenMunData = temps.find(t => t.place === '屯門');
+        const kowloonTongData = temps.find(t => t.place === '九龍城' || t.place === '京士柏'); // 九龍塘臨近區域
+
+        setWeather({
+          iconIndex: iconIndex,
+          tuenMun: { temp: tuenMunData ? tuenMunData.value : '--', status: '實時氣溫' },
+          kowloonTong: { temp: kowloonTongData ? kowloonTongData.value : '--', status: '實時氣溫' },
+          isError: false
+        });
+      } catch (error) {
+        console.error("天氣 API 失敗，使用備用數據", error);
+        setWeather({
+          iconIndex: 50, // 模擬晴天
+          tuenMun: { temp: 24, status: '大致天晴' },
+          kowloonTong: { temp: 25, status: '大致天晴' },
+          isError: true
+        });
+      }
+    };
+
+    fetchWeather();
+    const weatherTimer = setInterval(fetchWeather, 30 * 60 * 1000); // 30 分鐘更新
+    return () => clearInterval(weatherTimer);
+  }, []);
+
+  // 處理 Spotify 歌單變更
+  const handleSpotifySave = () => {
+    let newId = playlistId;
+    // 簡單正則表達式從 Spotify 分享連結提取 Playlist ID
+    const match = spotifyInput.match(/playlist\/([a-zA-Z0-9]+)/);
+    if (match && match[1]) {
+      newId = match[1];
+    } else if (spotifyInput.trim() !== "" && !spotifyInput.includes('/')) {
+      newId = spotifyInput; // 假設用戶直接輸入 ID
+    }
+    
+    setPlaylistId(newId);
+    localStorage.setItem('family_spotify_playlist', newId);
+    setIsEditingSpotify(false);
+    setSpotifyInput("");
+  };
+
+  // 輔助函數
+  const padZero = (num) => num.toString().padStart(2, '0');
+  const formatDate = (date) => new Intl.DateTimeFormat('zh-HK', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' }).format(date);
+
+  // 根據天文台 icon 代碼選擇動態圖標
+  const WeatherIcon = () => {
+    const i = weather.iconIndex;
+    if (i >= 50 && i <= 54) return <Sun className="text-amber-400 drop-shadow-md" size={36} />;
+    if (i >= 60 && i <= 61) return <Cloud className="text-slate-400 drop-shadow-md" size={36} />;
+    if (i >= 62 && i <= 64) return <CloudRain className="text-blue-400 drop-shadow-md" size={36} />;
+    if (i >= 65 && i <= 65) return <CloudLightning className="text-indigo-500 drop-shadow-md" size={36} />;
+    return <Cloud className="text-sky-300 drop-shadow-md" size={36} />; // 預設
+  };
+
+  return (
+    <>
+      <style>{`
+        /* 夢幻漸變背景動畫 */
+        @keyframes gradientBG {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        .bg-animated-gradient {
+          background: linear-gradient(-45deg, #ffedd5, #fef3c7, #ffe4e6, #fff7ed);
+          background-size: 400% 400%;
+          animation: gradientBG 15s ease infinite;
+        }
+        
+        /* 脈搏動畫 */
+        @keyframes heartbeat {
+          0%, 100% { transform: scale(1); box-shadow: 0 10px 25px -5px rgba(244, 63, 94, 0.2); }
+          50% { transform: scale(1.03); box-shadow: 0 20px 35px -5px rgba(244, 63, 94, 0.4); }
+        }
+        .animate-heartbeat {
+          animation: heartbeat 2s ease-in-out infinite;
+        }
+
+        /* 玻璃擬態通用卡片樣式 */
+        .glass-card {
+          background: rgba(255, 255, 255, 0.55);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border: 1px solid rgba(255, 255, 255, 0.8);
+          box-shadow: 0 8px 32px 0 rgba(230, 150, 50, 0.1);
+        }
+        
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+      `}</style>
+
+      <div className="min-h-screen bg-animated-gradient text-stone-800 font-sans p-4 md:p-8 flex items-center justify-center overflow-hidden">
+        
+        {/* 主要網格佈局 (完美適配 Tablet 橫向) */}
+        <div className="w-full max-w-7xl grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-fr">
+          
+          {/* 1. 日期時間面板 (左上) */}
+          <div className="col-span-1 glass-card rounded-[2rem] p-8 flex flex-col justify-center items-center transform transition-transform hover:-translate-y-1 duration-300">
+            <div className="bg-white/60 px-4 py-1.5 rounded-full flex items-center space-x-2 text-amber-600 mb-6 shadow-sm border border-white">
+              <Calendar size={18} />
+              <span className="text-sm font-bold tracking-wide">{formatDate(currentTime)}</span>
+            </div>
+            <div className="text-6xl md:text-[5rem] font-black tracking-tighter text-stone-800 leading-none filter drop-shadow-sm">
+              {padZero(currentTime.getHours())}<span className="text-amber-400 mx-1">:</span>{padZero(currentTime.getMinutes())}
+            </div>
+            <div className="mt-2 text-2xl font-bold text-stone-400 tracking-widest">
+              {padZero(currentTime.getSeconds())}
+            </div>
+          </div>
+
+          {/* 2. 出門倒數計時面板 (中上) */}
+          <div className={`col-span-1 rounded-[2rem] p-8 flex flex-col justify-center items-center transition-all duration-500 relative overflow-hidden ${
+            hasLeft 
+              ? 'bg-gradient-to-br from-green-100/80 to-emerald-50/80 backdrop-blur-xl border border-green-200 shadow-[0_8px_32px_0_rgba(16,185,129,0.15)]' 
+              : 'glass-card animate-heartbeat border-rose-100/50'
+          }`}>
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-rose-300 to-transparent opacity-50"></div>
+            
+            <div className="flex items-center space-x-2 mb-4">
+              <Clock size={20} className={hasLeft ? 'text-green-600' : 'text-rose-500'} />
+              <h2 className="text-sm font-bold text-stone-500 tracking-widest uppercase">Target 06:48</h2>
+            </div>
+            
+            {hasLeft ? (
+              <div className="flex flex-col items-center">
+                <div className="text-4xl md:text-5xl font-extrabold text-green-600 tracking-wide py-2 drop-shadow-sm">今日已出門</div>
+                <div className="text-green-500/80 font-medium mt-2">祝你有個美好的一天！☀️</div>
+              </div>
+            ) : (
+              <div className="text-5xl md:text-6xl font-black text-rose-500 tracking-wider tabular-nums drop-shadow-md">
+                {countdown ? (
+                  <div className="flex items-baseline space-x-2">
+                    <span>{padZero(countdown.hours)}</span>
+                    <span className="text-rose-300 text-4xl animate-pulse">:</span>
+                    <span>{padZero(countdown.minutes)}</span>
+                    <span className="text-rose-300 text-4xl animate-pulse">:</span>
+                    <span className="text-rose-400">{padZero(countdown.seconds)}</span>
+                  </div>
+                ) : '00:00:00'}
+              </div>
+            )}
+            {!hasLeft && (
+              <div className="mt-6 px-4 py-1.5 bg-rose-50 rounded-full border border-rose-100 text-xs font-bold text-rose-400 tracking-wider">
+                準備出發！把握時間 🚀
+              </div>
+            )}
+          </div>
+
+          {/* 3. 香港天氣面板 (右上) */}
+          <div className="col-span-1 glass-card rounded-[2rem] p-6 flex flex-col justify-between">
+            <div className="flex items-center justify-between px-2">
+              <div className="flex items-center space-x-3">
+                <WeatherIcon />
+                <div>
+                  <h2 className="text-lg font-extrabold text-stone-700 leading-tight">即時天氣</h2>
+                  <p className="text-xs font-medium text-stone-400">香港天文台 HKO</p>
+                </div>
+              </div>
+              {weather.isError && <AlertCircle size={16} className="text-amber-500" title="正在使用備用數據" />}
+            </div>
+            
+            <div className="space-y-3 mt-4">
+              {/* 屯門區 */}
+              <div className="bg-white/60 hover:bg-white/80 transition-colors rounded-2xl p-4 flex justify-between items-center border border-white/80 shadow-sm">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-sky-100 p-2 rounded-xl text-sky-500"><MapPin size={18} /></div>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-stone-700">屯門區</span>
+                    <span className="text-[10px] text-stone-400 font-medium">實時氣溫</span>
+                  </div>
+                </div>
+                <div className="text-3xl font-black text-stone-700 flex items-start">
+                  {weather.tuenMun.temp}<span className="text-base text-stone-400 font-bold mt-1 ml-0.5">°C</span>
+                </div>
+              </div>
+
+              {/* 九龍塘區 */}
+              <div className="bg-white/60 hover:bg-white/80 transition-colors rounded-2xl p-4 flex justify-between items-center border border-white/80 shadow-sm">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-indigo-100 p-2 rounded-xl text-indigo-500"><Thermometer size={18} /></div>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-stone-700">九龍塘區</span>
+                    <span className="text-[10px] text-stone-400 font-medium">實時氣溫</span>
+                  </div>
+                </div>
+                <div className="text-3xl font-black text-stone-700 flex items-start">
+                  {weather.kowloonTong.temp}<span className="text-base text-stone-400 font-bold mt-1 ml-0.5">°C</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 4. 鼓勵小朋友的說話面板 (左下，佔據兩格寬度) */}
+          <div className="col-span-1 md:col-span-2 bg-gradient-to-br from-amber-400 via-orange-400 to-rose-400 rounded-[2rem] p-8 shadow-xl shadow-orange-500/20 text-white flex flex-col justify-center relative overflow-hidden group">
+            {/* 裝飾背景 */}
+            <Quote className="absolute -top-6 -left-6 text-white/10 w-40 h-40 transform -rotate-12 transition-transform group-hover:rotate-0 duration-700" />
+            <Heart className="absolute -bottom-8 -right-8 text-white/10 w-48 h-48 transform rotate-12 transition-transform group-hover:scale-110 duration-700" />
+            
+            <div className="relative z-10 pl-4 md:pl-8 border-l-4 border-white/30 py-2">
+              <h2 className="text-amber-100 font-bold tracking-widest mb-4 uppercase text-xs flex items-center">
+                <Sun size={14} className="mr-2" /> Message of the Day
+              </h2>
+              <div className="space-y-3">
+                <p className="text-3xl md:text-4xl font-black leading-tight tracking-wide drop-shadow-md">
+                  "{quoteOfTheDay.en}"
+                </p>
+                <p className="text-xl md:text-2xl font-bold text-amber-50 drop-shadow-sm opacity-90">
+                  {quoteOfTheDay.zh}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 5. Spotify 播放器面板 (右下) */}
+          <div className="col-span-1 bg-[#121212] rounded-[2rem] p-3 shadow-xl shadow-stone-900/10 flex flex-col relative overflow-hidden group border border-stone-800/50">
+            {/* 編輯按鈕 (懸停時顯示) */}
+            <button 
+              onClick={() => setIsEditingSpotify(!isEditingSpotify)}
+              className="absolute top-4 right-4 z-20 bg-black/60 hover:bg-white/20 p-2 rounded-full text-white/70 hover:text-white transition-all backdrop-blur-sm opacity-0 group-hover:opacity-100"
+              title="更改 Spotify 歌單"
+            >
+              <Edit3 size={16} />
+            </button>
+
+            {isEditingSpotify ? (
+              <div className="absolute inset-0 z-30 bg-[#1e1e1e]/95 backdrop-blur-xl p-6 flex flex-col justify-center text-white">
+                <h3 className="text-sm font-bold mb-3 flex items-center"><Music size={16} className="mr-2 text-green-400"/> 更換歌單</h3>
+                <p className="text-[10px] text-stone-400 mb-3">請貼上 Spotify Playlist 連結：</p>
+                <input 
+                  type="text" 
+                  className="w-full bg-black/50 border border-stone-600 rounded-xl p-3 text-sm mb-3 focus:outline-none focus:border-green-400 transition-colors"
+                  placeholder="https://open.spotify.com/playlist/..."
+                  value={spotifyInput}
+                  onChange={(e) => setSpotifyInput(e.target.value)}
+                />
+                <div className="flex space-x-2">
+                  <button onClick={handleSpotifySave} className="flex-1 bg-green-500 hover:bg-green-400 text-black font-bold py-2 rounded-xl text-sm flex justify-center items-center transition-colors">
+                    <Check size={16} className="mr-1"/> 儲存
+                  </button>
+                  <button onClick={() => setIsEditingSpotify(false)} className="px-4 bg-stone-700 hover:bg-stone-600 font-bold rounded-xl text-sm transition-colors">
+                    取消
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="absolute top-5 left-5 flex items-center space-x-2 text-white/50 z-10 pointer-events-none transition-opacity">
+              <Music size={14} className="text-green-500 animate-pulse" />
+              <span className="text-[10px] font-black tracking-widest">FAMILY PLAYLIST</span>
+            </div>
+            
+            <div className="flex-1 rounded-[1.25rem] overflow-hidden mt-8 relative">
+              <iframe 
+                src={`https://open.spotify.com/embed/playlist/${playlistId}?utm_source=generator&theme=0`} 
+                width="100%" 
+                height="100%" 
+                frameBorder="0" 
+                allowFullScreen="" 
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                loading="lazy"
+                title="Spotify Family Playlist"
+                className="absolute inset-0"
+              ></iframe>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </>
+  );
+}
+
+
