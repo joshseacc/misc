@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>daily work log</title>
+    <!-- 引入 Tailwind CSS 方便排版 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Phosphor Icons 作為圖示 -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        /* 定義動態主題色的 CSS 變數 */
+        :root {
+            --color-primary: #3b82f6; /* 預設，會被 JS 覆蓋 */
+            --color-secondary: #8b5cf6; /* 預設，會被 JS 覆蓋 */
+        }
+
+        /* 讓選取文字時的背景色與主題色搭配 */
+        ::selection {
+            background-color: var(--color-primary);
+            color: white;
+        }
+
+        /* 自訂主題色 class 供 Tailwind 使用 */
+        .theme-bg { background-color: var(--color-primary); }
+        .theme-bg-secondary { background-color: var(--color-secondary); }
+        .theme-text { color: var(--color-primary); }
+        .theme-border { border-color: var(--color-primary); }
+        
+        .theme-hover:hover { 
+            filter: brightness(1.1); 
+            transform: translateY(-1px);
+        }
+
+        /* 卡片設計陰影與過渡效果 */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Checklist 刪除線與淡化效果 */
+        .completed-item {
+            text-decoration: line-through;
+            color: #9ca3af;
+            transition: all 0.3s ease;
+        }
+
+        /* 拖曳檔案時的覆蓋層 */
+        #dropzone-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 50;
+            backdrop-filter: blur(5px);
+            justify-content: center;
+            align-items: center;
+            border: 8px dashed var(--color-primary);
+        }
+        #dropzone-overlay.active {
+            display: flex;
+        }
+
+        /* 自訂捲軸 */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background-color: var(--color-primary); }
+
+        /* Font Override */
+        body { font-family: Calibri, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans transition-colors duration-700 pb-10" id="body-bg">
+
+    <!-- 全螢幕拖曳上傳覆蓋層 -->
+    <div id="dropzone-overlay">
+        <div class="text-center text-white pointer-events-none">
+            <i class="ph ph-file-arrow-down text-8xl mb-4 text-[var(--color-primary)]"></i>
+            <h2 class="text-4xl font-bold">Release mouse to load JSON data</h2>
+            <p class="mt-2 text-xl opacity-80">Current data will be overwritten</p>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        <!-- 頂部 Header & 控制列 -->
+        <header class="flex flex-col md:flex-row justify-between items-center mb-8 glass-card p-6 rounded-2xl">
+            <div class="flex items-center gap-4 mb-4 md:mb-0">
+                <div class="w-12 h-12 rounded-xl theme-bg flex items-center justify-center text-white shadow-lg">
+                    <i class="ph ph-lightning text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800 tracking-tight">daily work log</h1>
+                    <p class="text-sm text-gray-500" id="header-date">Loading date...</p>
+                </div>
+            </div>
+
+            <!-- JSON 匯入匯出區塊 -->
+            <div class="flex gap-3">
+                <input type="file" id="import-file" accept=".json" class="hidden">
+                <button onclick="document.getElementById('import-file').click()" 
+                        class="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium">
+                    <i class="ph ph-folder-open text-xl"></i> ?? Load Data
+                </button>
+                <button onclick="exportData()" id="export-btn"
+                        class="flex items-center gap-2 px-5 py-2 theme-bg text-white rounded-lg theme-hover transition-all font-medium shadow-md">
+                    <i class="ph ph-floppy-disk text-xl"></i> ?? Export / Save
+                    <span id="unsaved-dot" class="hidden flex h-3 w-3 absolute -top-1 -right-1">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                    </span>
+                </button>
+            </div>
+        </header>
+
+        <!-- 主內容區塊 (Grid Layout) -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- 區塊 1: Focus Hour Challenge -->
+            <section class="lg:col-span-1 flex flex-col gap-6">
+                <div class="glass-card p-6 rounded-2xl flex-1 flex flex-col">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-3">
+                        <i class="ph ph-timer theme-text"></i> Focus Hour
+                    </h2>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Topic</label>
+                        <input type="text" id="focus-topic" placeholder="What are we going to finish today?" 
+                               class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-shadow" oninput="markDirty()">
+                    </div>
+                    
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Estimated Completion Time</label>
+                        <input type="time" id="focus-time" 
+                               class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-shadow" onchange="markDirty()">
+                    </div>
+
+                    <!-- 番茄鐘區塊 (預設隱藏，點擊開始後展開) -->
+                    <div id="pomodoro-container" class="hidden mb-6 p-4 rounded-xl bg-gray-50 border border-gray-200 text-center">
+                        <h3 id="timer-status" class="text-lg font-semibold text-gray-600 mb-2">Work Time (25:00)</h3>
+                        <div id="timer-display" class="text-5xl font-bold theme-text font-mono tracking-wider mb-4 drop-shadow-sm">25:00</div>
+                        <div class="flex justify-center gap-2">
+                            <button id="timer-pause-btn" onclick="toggleTimer()" class="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors">
+                                Pause
+                            </button>
+                            <button onclick="resetTimer()" class="px-4 py-2 bg-gray-400 text-white rounded-md hover:bg-gray-500 transition-colors">
+                                Reset
+                            </button>
+                        </div>
+                    </div>
+
+                    <button id="start-focus-btn" onclick="startFocus()" 
+                            class="w-full py-3 rounded-xl theme-bg text-white font-bold text-lg theme-hover transition-all shadow-md mb-6">
+                        ?? Start Focus
+                    </button>
+
+                    <!-- 完成紀錄填寫 -->
+                    <div id="log-entry-container" class="hidden flex-col gap-3 mb-6 border-t pt-4">
+                        <label class="block text-sm font-medium text-gray-700">What did you accomplish?</label>
+                        <textarea id="focus-log-input" rows="2" placeholder="Briefly describe your completed tasks..." 
+                                  class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[var(--color-primary)]"></textarea>
+                        <button onclick="saveFocusLog()" class="py-2 bg-green-500 text-white font-bold rounded-lg hover:bg-green-600 transition-colors">
+                            Save Record
+                        </button>
+                    </div>
+
+                    <!-- 歷史紀錄列表 -->
+                    <div class="mt-auto pt-4 border-t border-gray-100">
+                        <h3 class="text-sm font-bold text-gray-500 mb-3">Today's Focus Log</h3>
+                        <ul id="focus-history-list" class="space-y-3 max-h-48 overflow-y-auto pr-2">
+                            <!-- JS 動態產生 -->
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 區塊 2: Admin Items (Checklist) -->
+            <section class="lg:col-span-1 flex flex-col">
+                <div class="glass-card p-6 rounded-2xl flex-1 flex flex-col h-full">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-3">
+                        <i class="ph ph-check-square-offset theme-text"></i> Admin and Misc
+                    </h2>
+                    
+                    <form onsubmit="addChecklistItem(event)" class="flex gap-2 mb-4">
+                        <input type="text" id="checklist-input" placeholder="Add new task..." required
+                               class="flex-1 px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-shadow">
+                        <button type="submit" class="px-4 py-2 theme-bg text-white rounded-lg hover:brightness-110 transition-colors font-medium shadow-sm">
+                            Add
+                        </button>
+                    </form>
+
+                    <ul id="checklist-container" class="space-y-2 flex-1 overflow-y-auto pr-2">
+                        <!-- JS 動態產生 -->
+                    </ul>
+
+                    <button onclick="clearCompletedChecklist()" 
+                            class="mt-4 w-full py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium border border-gray-200">
+                        <i class="ph ph-trash"></i> Clear Completed
+                    </button>
+                </div>
+            </section>
+
+            <!-- 區塊 3: 每日學習筆記 -->
+            <section class="lg:col-span-1 flex flex-col">
+                <div class="glass-card p-6 rounded-2xl flex-1 flex flex-col h-full relative">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-3">
+                        <i class="ph ph-notebook theme-text"></i> What I've Learnt
+                    </h2>
+                    <p class="text-xs text-gray-400 mb-2 absolute top-7 right-6">Markdown / Plain Text</p>
+                    
+                    <textarea id="daily-notes" placeholder="What did you learn today? Write your notes here..." 
+                              oninput="markDirty(); updateNotesState()"
+                              class="w-full flex-1 p-4 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all resize-none font-mono text-sm leading-relaxed"></textarea>
+                </div>
+            </section>
+
+            <!-- 區塊 4: Work Progress (工作進度) - 橫跨所有欄位 -->
+            <section id="work-progress-section" class="lg:col-span-3 flex flex-col gap-6 mt-4">
+                <div class="glass-card p-6 rounded-2xl flex flex-col">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-3">
+                        <i class="ph ph-kanban theme-text"></i> Work Progress
+                    </h2>
+                    
+                    <!-- 進度輸入表單 -->
+                    <form onsubmit="handleWorkProgressSubmit(event)" class="flex flex-col gap-4 mb-8 bg-gray-50 p-5 rounded-xl border border-gray-100">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Job Number</label>
+                                <input type="text" id="wp-job" placeholder="e.g., #1024" oninput="markDirty()"
+                                       class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-shadow">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Nature</label>
+                                <input type="text" id="wp-nature" placeholder="e.g., Dev, Design, Meeting" oninput="markDirty()"
+                                       class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-shadow">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">SOLO</label>
+                                <input type="text" id="wp-solo" placeholder="Enter SOLO related info" oninput="markDirty()"
+                                       class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-shadow">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Content</label>
+                            <textarea id="wp-content" rows="5" placeholder="Detailed work content, progress, or issues..." oninput="markDirty()"
+                                      class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-shadow resize-y"></textarea>
+                        </div>
+                        <div class="flex justify-end">
+                            <button type="submit" id="wp-submit-btn" 
+                                    class="px-6 py-2 theme-bg text-white font-bold rounded-lg theme-hover transition-all shadow-md">
+                                <i class="ph ph-plus-circle mr-1"></i> Add Progress
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- 進度卡片列表 -->
+                    <div id="wp-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- JS 動態產生卡片 -->
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        /* =========================================
+           狀態管理與核心邏輯 (State Management)
+           ========================================= */
+        
+        // 核心資料結構
+        let appState = {
+            focusHistory: [],
+            checklist: [],
+            notes: "",
+            workProgress: [] // 新增工作進度狀態
+        };
+
+        // 追蹤是否有未儲存(未匯出)的變更
+        let isDirty = false;
+
+        // 標記資料已變更，觸發防呆機制
+        function markDirty() {
+            isDirty = true;
+            document.getElementById('unsaved-dot').classList.remove('hidden');
+        }
+
+        // 標記資料已乾淨(已匯出/剛匯入)
+        function markClean() {
+            isDirty = false;
+            document.getElementById('unsaved-dot').classList.add('hidden');
+        }
+
+        // 防呆機制：關閉或重整前警告
+        window.addEventListener('beforeunload', (e) => {
+            if (isDirty) {
+                const msg = "You have unsaved changes. Are you sure you want to leave?";
+                e.returnValue = msg; // 標準寫法
+                return msg;
+            }
+        });
+
+        /* =========================================
+           UI 初始化與動態主題色彩生成
+           ========================================= */
+
+        function initApp() {
+            // 1. 設定日期顯示
+            const now = new Date();
+            const dateOptions = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+            document.getElementById('header-date').textContent = now.toLocaleDateString('en-US', dateOptions);
+
+            // 2. 預設「預計完成時間」為當前時間的 1 小時後
+            now.setHours(now.getHours() + 1);
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('focus-time').value = `${hours}:${minutes}`;
+
+            // 3. 根據日期生成動態主題色 (大膽且和諧)
+            generateDailyTheme();
+
+            // 4. 綁定事件監聽
+            setupDragAndDrop();
+            document.getElementById('import-file').addEventListener('change', handleFileUpload);
+            
+            // 初始渲染一次空的狀態
+            renderAll();
+        }
+
+        // 根據當前日期算出一個 Hash，並轉為 HSL 顏色
+        function generateDailyTheme() {
+            const dateStr = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+            let hash = 0;
+            for (let i = 0; i < dateStr.length; i++) {
+                hash = dateStr.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            // 產生 0-359 之間的主色調 (Hue)
+            const huePrimary = Math.abs(hash) % 360;
+            // 產生對比或相鄰的副色調
+            const hueSecondary = (huePrimary + 45) % 360; 
+
+            // 設定 CSS 變數，大膽色彩：飽和度 85%，亮度 55%
+            document.documentElement.style.setProperty('--color-primary', `hsl(${huePrimary}, 85%, 55%)`);
+            document.documentElement.style.setProperty('--color-secondary', `hsl(${hueSecondary}, 85%, 65%)`);
+            
+            // 給背景一個極淡的主題色，增加整體沉浸感
+            document.getElementById('body-bg').style.backgroundColor = `hsl(${huePrimary}, 30%, 98%)`;
+        }
+
+        /* =========================================
+           JSON 檔案匯出/匯入邏輯 (重要！)
+           ========================================= */
+
+        /**
+         * [匯出邏輯]
+         * 1. 將 `appState` 物件轉換為 JSON 字串。
+         * 2. 使用 Blob (Binary Large Object) 將字串封裝成一個檔案物件。
+         * 3. 建立一個暫時的 URL (URL.createObjectURL)。
+         * 4. 創造一個隱藏的 <a> 標籤，設定 download 屬性及檔案名稱。
+         * 5. 觸發點擊下載，並將 isDirty 設為 false。
+         */
+        function exportData() {
+            // 更新 notes 狀態
+            appState.notes = document.getElementById('daily-notes').value;
+
+            const dataStr = JSON.stringify(appState, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            
+            const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+            const filename = `work-log-${dateStr}.json`;
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            markClean(); // 下載完畢，解除警告狀態
+            alert("? Data exported successfully!");
+        }
+
+        /**
+         * [匯入邏輯]
+         * 1. 取得使用者上傳或拖曳的 File 物件。
+         * 2. 使用 FileReader 讀取檔案內容為純文字 (readAsText)。
+         * 3. 透過 JSON.parse 解析字串，還原成 JavaScript 物件。
+         * 4. 將資料灌回 `appState` 並重新渲染畫面。
+         */
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            processFile(file);
+            event.target.value = ''; // 清空 input 以便重複選擇同檔
+        }
+
+        function processFile(file) {
+            if (file.type !== "application/json" && !file.name.endsWith(".json")) {
+                alert("? Please upload a valid JSON file!");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const loadedData = JSON.parse(e.target.result);
+                    // 簡單驗證資料格式
+                    if (loadedData.focusHistory !== undefined && loadedData.checklist !== undefined) {
+                        // 確保舊版 JSON 載入時也有 workProgress 屬性
+                        if (!loadedData.workProgress) loadedData.workProgress = [];
+                        
+                        appState = loadedData;
+                        renderAll();
+                        markClean(); // 剛載入的資料視為乾淨狀態
+                    } else {
+                        alert("? Invalid JSON format for this system. Load failed.");
+                    }
+                } catch (err) {
+                    alert("? JSON parsing failed. The file might be corrupted.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        /* 拖曳載入 (Drag & Drop) 視覺與邏輯處理 */
+        function setupDragAndDrop() {
+            const overlay = document.getElementById('dropzone-overlay');
+
+            window.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                overlay.classList.add('active');
+            });
+
+            window.addEventListener('dragleave', (e) => {
+                // 確保滑鼠真的離開視窗才隱藏
+                if (e.clientX === 0 || e.clientY === 0) {
+                    overlay.classList.remove('active');
+                }
+            });
+
+            window.addEventListener('drop', (e) => {
+                e.preventDefault();
+                overlay.classList.remove('active');
+                
+                if (e.dataTransfer.files.length > 0) {
+                    processFile(e.dataTransfer.files[0]);
+                }
+            });
+        }
+
+        // 統一重新渲染所有資料到畫面上
+        function renderAll() {
+            renderChecklist();
+            renderFocusHistory();
+            renderWorkProgress(); // 渲染工作進度
+            document.getElementById('daily-notes').value = appState.notes || "";
+        }
+
+        /* =========================================
+           區塊 1: Focus Hour & 番茄鐘邏輯
+           ========================================= */
+
+        let timerInterval = null;
+        let timeLeft = 25 * 60; // 預設 25 分鐘 (秒)
+        let isTimerRunning = false;
+        let isWorkMode = true; // true = 25分工作, false = 5分休息
+
+        function startFocus() {
+            const topic = document.getElementById('focus-topic').value.trim();
+            if (!topic) {
+                alert("Please enter a focus topic first!");
+                document.getElementById('focus-topic').focus();
+                return;
+            }
+
+            // 顯示番茄鐘 UI，隱藏開始按鈕
+            document.getElementById('pomodoro-container').classList.remove('hidden');
+            document.getElementById('start-focus-btn').classList.add('hidden');
+            
+            // 確保重置狀態並自動開始
+            resetTimer(false);
+            toggleTimer();
+            markDirty();
+        }
+
+        function toggleTimer() {
+            const btn = document.getElementById('timer-pause-btn');
+            if (isTimerRunning) {
+                clearInterval(timerInterval);
+                isTimerRunning = false;
+                btn.textContent = "Resume";
+                btn.classList.replace('bg-yellow-500', 'bg-green-500');
+                btn.classList.replace('hover:bg-yellow-600', 'hover:bg-green-600');
+            } else {
+                timerInterval = setInterval(updateTimerDisplay, 1000);
+                isTimerRunning = true;
+                btn.textContent = "Pause";
+                btn.classList.replace('bg-green-500', 'bg-yellow-500');
+                btn.classList.replace('hover:bg-green-600', 'hover:bg-yellow-600');
+            }
+        }
+
+        function resetTimer(manual = true) {
+            clearInterval(timerInterval);
+            isTimerRunning = false;
+            isWorkMode = true;
+            timeLeft = 25 * 60;
+            updateStatusText();
+            formatAndShowTime();
+            
+            const btn = document.getElementById('timer-pause-btn');
+            btn.textContent = "Start/Pause";
+            btn.classList.replace('bg-green-500', 'bg-yellow-500');
+            btn.classList.replace('hover:bg-green-600', 'hover:bg-yellow-600');
+
+            if (manual) markDirty();
+        }
+
+        function updateTimerDisplay() {
+            if (timeLeft > 0) {
+                timeLeft--;
+                formatAndShowTime();
+            } else {
+                // 計時結束
+                clearInterval(timerInterval);
+                isTimerRunning = false;
+                playAlarm();
+
+                if (isWorkMode) {
+                    // 工作結束，切換到休息
+                    alert("?? 25 minutes focus finished! Take a break.");
+                    isWorkMode = false;
+                    timeLeft = 5 * 60;
+                    
+                    // 顯示填寫紀錄的區塊
+                    document.getElementById('log-entry-container').classList.remove('hidden');
+                    document.getElementById('log-entry-container').classList.add('flex');
+                    document.getElementById('focus-log-input').focus();
+                } else {
+                    // 休息結束
+                    alert("? Break finished! Ready for the next focus.");
+                    isWorkMode = true;
+                    timeLeft = 25 * 60;
+                }
+                updateStatusText();
+                formatAndShowTime();
+                
+                const btn = document.getElementById('timer-pause-btn');
+                btn.textContent = "Resume";
+                btn.classList.replace('bg-yellow-500', 'bg-green-500');
+            }
+        }
+
+        function formatAndShowTime() {
+            const m = String(Math.floor(timeLeft / 60)).padStart(2, '0');
+            const s = String(timeLeft % 60).padStart(2, '0');
+            document.getElementById('timer-display').textContent = `${m}:${s}`;
+        }
+
+        function updateStatusText() {
+            const statusEl = document.getElementById('timer-status');
+            if (isWorkMode) {
+                statusEl.textContent = "?? Focus Work Time (25:00)";
+                statusEl.className = "text-lg font-semibold text-gray-600 mb-2";
+            } else {
+                statusEl.textContent = "? Break Time (05:00)";
+                statusEl.className = "text-lg font-semibold text-blue-500 mb-2";
+            }
+        }
+
+        function playAlarm() {
+            // 簡單的音效提示
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
+            oscillator.connect(audioCtx.destination);
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.5);
+        }
+
+        // 儲存工作紀錄
+        function saveFocusLog() {
+            const topic = document.getElementById('focus-topic').value;
+            const targetTime = document.getElementById('focus-time').value;
+            const logContent = document.getElementById('focus-log-input').value.trim();
+
+            if (!logContent) {
+                alert("Please fill in the completed content!");
+                return;
+            }
+
+            const now = new Date();
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+            appState.focusHistory.push({
+                topic: topic || "Unnamed Task",
+                plannedTime: targetTime,
+                actualTime: timeStr,
+                log: logContent
+            });
+
+            markDirty();
+            renderFocusHistory();
+
+            // 隱藏紀錄填寫區，恢復原始狀態，準備下次專注
+            document.getElementById('log-entry-container').classList.add('hidden');
+            document.getElementById('log-entry-container').classList.remove('flex');
+            document.getElementById('focus-log-input').value = "";
+            document.getElementById('focus-topic').value = "";
+            
+            document.getElementById('pomodoro-container').classList.add('hidden');
+            document.getElementById('start-focus-btn').classList.remove('hidden');
+            resetTimer(false);
+        }
+
+        function renderFocusHistory() {
+            const list = document.getElementById('focus-history-list');
+            list.innerHTML = "";
+
+            if (appState.focusHistory.length === 0) {
+                list.innerHTML = `<li class="text-sm text-gray-400 italic text-center py-4">No records yet. Start focusing today!</li>`;
+                return;
+            }
+
+            // 倒序顯示，最新在最上
+            [...appState.focusHistory].reverse().forEach(record => {
+                const li = document.createElement('li');
+                li.className = "p-3 bg-white rounded-lg border border-gray-100 shadow-sm flex flex-col gap-1";
+                li.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="font-bold text-gray-700 text-sm">${record.topic}</span>
+                        <span class="text-xs text-gray-400"><i class="ph ph-clock"></i> Completed at ${record.actualTime}</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-1">${record.log}</p>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        /* =========================================
+           區塊 2: Checklist 邏輯
+           ========================================= */
+
+        function addChecklistItem(e) {
+            e.preventDefault();
+            const input = document.getElementById('checklist-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            appState.checklist.push({
+                id: Date.now().toString(),
+                text: text,
+                completed: false
+            });
+
+            input.value = "";
+            markDirty();
+            renderChecklist();
+        }
+
+        function toggleChecklist(id) {
+            const item = appState.checklist.find(i => i.id === id);
+            if (item) {
+                item.completed = !item.completed;
+                markDirty();
+                renderChecklist();
+            }
+        }
+
+        function deleteChecklistItem(id) {
+            appState.checklist = appState.checklist.filter(i => i.id !== id);
+            markDirty();
+            renderChecklist();
+        }
+
+        function clearCompletedChecklist() {
+            const oldLength = appState.checklist.length;
+            appState.checklist = appState.checklist.filter(i => !i.completed);
+            
+            if (appState.checklist.length !== oldLength) {
+                markDirty();
+                renderChecklist();
+            }
+        }
+
+        function renderChecklist() {
+            const container = document.getElementById('checklist-container');
+            container.innerHTML = "";
+
+            if (appState.checklist.length === 0) {
+                container.innerHTML = `<div class="text-sm text-gray-400 italic text-center py-4">No pending tasks</div>`;
+                return;
+            }
+
+            appState.checklist.forEach(item => {
+                const li = document.createElement('li');
+                li.className = `flex items-center justify-between p-3 rounded-lg border border-gray-100 bg-white shadow-sm hover:border-[var(--color-primary)] transition-colors group`;
+                
+                li.innerHTML = `
+                    <div class="flex items-center gap-3 flex-1 overflow-hidden" onclick="toggleChecklist('${item.id}')" style="cursor: pointer;">
+                        <div class="w-5 h-5 rounded border ${item.completed ? 'theme-bg theme-border text-white flex items-center justify-center' : 'border-gray-300'} transition-colors">
+                            ${item.completed ? '<i class="ph ph-check text-xs"></i>' : ''}
+                        </div>
+                        <span class="truncate ${item.completed ? 'completed-item' : 'text-gray-700 font-medium'}">${item.text}</span>
+                    </div>
+                    <button onclick="deleteChecklistItem('${item.id}')" class="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1">
+                        <i class="ph ph-x"></i>
+                    </button>
+                `;
+                container.appendChild(li);
+            });
+        }
+
+        /* =========================================
+           區塊 3: 筆記狀態更新
+           ========================================= */
+        function updateNotesState() {
+            // 這個函式搭配 markDirty 在 textarea 的 oninput 觸發
+            appState.notes = document.getElementById('daily-notes').value;
+        }
+
+        /* =========================================
+           區塊 4: Work Progress 邏輯
+           ========================================= */
+        
+        let editingProgressId = null; // 紀錄目前正在編輯的進度 ID
+
+        function handleWorkProgressSubmit(e) {
+            e.preventDefault();
+            const job = document.getElementById('wp-job').value.trim();
+            const nature = document.getElementById('wp-nature').value.trim();
+            const solo = document.getElementById('wp-solo').value.trim();
+            const content = document.getElementById('wp-content').value.trim();
+
+            if (!job && !nature && !solo && !content) return; // 避免送出全空
+
+            if (editingProgressId) {
+                // 更新現有資料
+                const item = appState.workProgress.find(i => i.id === editingProgressId);
+                if (item) {
+                    item.jobNumber = job;
+                    item.nature = nature;
+                    item.solo = solo;
+                    item.content = content;
+                }
+                editingProgressId = null;
+                const btn = document.getElementById('wp-submit-btn');
+                btn.innerHTML = `<i class="ph ph-plus-circle mr-1"></i> Add Progress`;
+            } else {
+                // 建立新資料
+                appState.workProgress.push({
+                    id: Date.now().toString(),
+                    jobNumber: job,
+                    nature: nature,
+                    solo: solo,
+                    content: content
+                });
+            }
+
+            e.target.reset(); // 清空表單
+            markDirty();
+            renderWorkProgress();
+        }
+
+        function editWorkProgress(id) {
+            const item = appState.workProgress.find(i => i.id === id);
+            if (!item) return;
+
+            // 將資料填回表單
+            document.getElementById('wp-job').value = item.jobNumber;
+            document.getElementById('wp-nature').value = item.nature;
+            document.getElementById('wp-solo').value = item.solo;
+            document.getElementById('wp-content').value = item.content;
+
+            editingProgressId = id;
+            
+            // 變更按鈕外觀與文字
+            const btn = document.getElementById('wp-submit-btn');
+            btn.innerHTML = `<i class="ph ph-floppy-disk mr-1"></i> Save Changes`;
+
+            // 滑動回表單區塊方便編輯
+            document.getElementById('work-progress-section').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function deleteWorkProgress(id) {
+            if (confirm("Are you sure you want to delete this progress?")) {
+                appState.workProgress = appState.workProgress.filter(i => i.id !== id);
+                
+                // 如果正在編輯被刪除的項目，則重置表單
+                if (editingProgressId === id) {
+                    editingProgressId = null;
+                    document.getElementById('wp-job').form.reset();
+                    document.getElementById('wp-submit-btn').innerHTML = `<i class="ph ph-plus-circle mr-1"></i> Add Progress`;
+                }
+
+                markDirty();
+                renderWorkProgress();
+            }
+        }
+
+        function renderWorkProgress() {
+            const list = document.getElementById('wp-list');
+            list.innerHTML = "";
+
+            if (!appState.workProgress || appState.workProgress.length === 0) {
+                list.innerHTML = `<div class="col-span-full text-sm text-gray-400 italic text-center py-6">No work progress created yet</div>`;
+                return;
+            }
+
+            // 反轉陣列以最新的排在最前面
+            [...appState.workProgress].reverse().forEach(item => {
+                const card = document.createElement('div');
+                card.className = "bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-2 hover:shadow-md transition-shadow";
+                
+                // 將換行符號轉為 <br> 以便在 HTML 正確顯示
+                const formattedContent = item.content.replace(/\n/g, '<br>');
+
+                card.innerHTML = `
+                    <div class="flex flex-wrap items-center gap-2 mb-1 border-b pb-2">
+                        ${item.jobNumber ? `<span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-bold rounded">#${item.jobNumber}</span>` : ''}
+                        ${item.nature ? `<span class="px-2 py-1 bg-blue-50 text-blue-600 border border-blue-100 text-xs font-semibold rounded">${item.nature}</span>` : ''}
+                        ${item.solo ? `<span class="px-2 py-1 bg-purple-50 text-purple-600 border border-purple-100 text-xs font-semibold rounded">SOLO: ${item.solo}</span>` : ''}
+                        <div class="ml-auto flex gap-2">
+                            <button onclick="editWorkProgress('${item.id}')" title="編輯" class="text-gray-400 hover:text-blue-500 transition-colors">
+                                <i class="ph ph-pencil-simple text-lg"></i>
+                            </button>
+                            <button onclick="deleteWorkProgress('${item.id}')" title="刪除" class="text-gray-400 hover:text-red-500 transition-colors">
+                                <i class="ph ph-trash text-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="text-sm text-gray-700 leading-relaxed mt-1 break-words">
+                        ${formattedContent || '<span class="text-gray-400 italic">No details provided</span>'}
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        // 啟動應用程式
+        window.onload = initApp;
+
+    </script>
+</body>
+</html>
