@@ -549,7 +549,12 @@
             const blob = new Blob([dataStr], { type: "application/json" });
             const url = URL.createObjectURL(blob);
             
-            const dateStr = getTodayString().replace(/-/g, '');
+            const now = new Date();
+            const dd = String(now.getDate()).padStart(2, '0');
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const hh = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            const dateStr = `${dd}${mm}_${hh}${min}`;
             
             const a = document.createElement('a');
             a.download = `kids-schedule-${dateStr}.json`;
