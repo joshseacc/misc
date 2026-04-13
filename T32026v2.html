@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assessment Prep List</title>
+    
+    <link rel="icon" type="image/png" href="./favicon.png">
+    <link rel="apple-touch-icon" href="./favicon.png">
+
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* 自訂簡單的捲動條美化 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .strikethrough {
+            text-decoration: line-through;
+            opacity: 0.5;
+        }
+        #import-file {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-orange-50/40 text-gray-800 font-sans min-h-screen p-4 md:p-6 flex flex-col">
+
+    <!-- Toast 提示容器 -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2"></div>
+
+    <!-- 客製化確認刪除的 Modal (取代原生的 confirm，解決卡死問題) -->
+    <div id="confirm-modal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center opacity-0 transition-opacity duration-200 backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-xl shadow-xl max-w-sm w-full transform scale-95 transition-transform duration-200" id="confirm-modal-box">
+            <h3 class="text-lg font-bold mb-2 text-gray-800">?? 確認刪除</h3>
+            <p class="text-gray-600 mb-6 text-sm">刪除此評估項目，將同時刪除與其關聯的準備清單，確定嗎？</p>
+            <div class="flex justify-end gap-3">
+                <button onclick="closeConfirmModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium transition">取消</button>
+                <button id="confirm-delete-btn" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm font-medium shadow-sm transition">確定刪除</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 標題與操作列 -->
+    <header class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 bg-white/80 backdrop-blur-md p-4 rounded-xl shadow-sm border border-orange-100">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">??? Assessment Prep List</h1>
+            <p class="text-sm text-gray-500 mt-1">Chelsea (<span class="text-emerald-500 font-bold">綠色</span>) & Joshua (<span class="text-blue-500 font-bold">藍色</span>) 的專屬管理面板</p>
+        </div>
+        <div class="flex gap-3">
+            <button onclick="document.getElementById('import-file').click()" class="px-4 py-2 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg font-medium transition flex items-center gap-2 text-sm border border-orange-200">
+                ?? 載入進度
+            </button>
+            <input type="file" id="import-file" accept=".json" onchange="importJSON(event)">
+            
+            <button onclick="exportJSON()" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition flex items-center gap-2 shadow-md text-sm">
+                ?? 儲存/下載進度
+            </button>
+        </div>
+    </header>
+
+    <!-- 四欄式主佈局 -->
+    <!-- 電腦大螢幕為4欄，平板為2欄，手機為1欄疊加 -->
+    <main class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 flex-grow h-[calc(100vh-160px)]">
+        
+        <!-- 第一欄：評估時間表 -->
+        <section class="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm p-4 flex flex-col border border-orange-100 h-full overflow-hidden">
+            <h2 class="text-base font-bold text-gray-700 mb-3 border-b border-gray-100 pb-2">?? 評估時間表 (Schedule)</h2>
+            <form id="form-assessment" class="mb-4 bg-gray-50/50 p-3 rounded-lg border border-gray-100 shrink-0">
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                    <select id="a-child" class="p-2 border border-gray-200 rounded text-sm w-full outline-none focus:border-orange-300 focus:ring-1 focus:ring-orange-300 bg-white transition" required>
+                        <option value="C">?? Chelsea</option>
+                        <option value="J">?? Joshua</option>
+                    </select>
+                    <input type="date" id="a-date" class="p-2 border border-gray-200 rounded text-sm w-full outline-none focus:border-orange-300 focus:ring-1 focus:ring-orange-300 bg-white transition" required>
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="a-title" placeholder="評估項目 (如: Music CA)" class="p-2 border border-gray-200 rounded text-sm flex-grow outline-none focus:border-orange-300 focus:ring-1 focus:ring-orange-300 bg-white transition" required>
+                    <button type="submit" class="bg-slate-700 text-white px-3 py-1 rounded hover:bg-slate-800 transition shadow-sm">+</button>
+                </div>
+            </form>
+            <div id="list-assessment" class="flex-grow overflow-y-auto pr-1 space-y-3"></div>
+        </section>
+
+        <!-- 第二欄：家長準備清單 -->
+        <section class="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm p-4 flex flex-col border border-orange-100 h-full overflow-hidden">
+            <h2 class="text-base font-bold text-gray-700 mb-3 border-b border-gray-100 pb-2">?? 家長準備 (Preparation)</h2>
+            <form id="form-prep" class="mb-4 bg-gray-50/50 p-3 rounded-lg border border-gray-100 shrink-0">
+                <div class="mb-2">
+                    <select id="p-assessmentId" class="p-2 border border-gray-200 rounded text-sm w-full outline-none focus:border-orange-300 focus:ring-1 focus:ring-orange-300 bg-white transition" required>
+                        <option value="">-- 選擇關聯的評估項目 --</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-3 gap-2 mb-2">
+                    <input type="date" id="p-date" class="col-span-1 p-2 border border-gray-200 rounded text-sm w-full outline-none focus:border-orange-300 focus:ring-1 focus:ring-orange-300 bg-white transition" required>
+                    <div class="col-span-2 flex gap-2">
+                        <input type="text" id="p-content" placeholder="準備內容..." class="p-2 border border-gray-200 rounded text-sm flex-grow outline-none focus:border-orange-300 focus:ring-1 focus:ring-orange-300 bg-white transition" required>
+                        <button type="submit" class="bg-slate-700 text-white px-3 py-1 rounded hover:bg-slate-800 transition shadow-sm">+</button>
+                    </div>
+                </div>
+            </form>
+            <div id="list-prep" class="flex-grow overflow-y-auto pr-1 space-y-3"></div>
+        </section>
+
+        <!-- 第三欄：按日待辦事項 -->
+        <section class="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm p-4 flex flex-col border border-orange-100 h-full overflow-hidden">
+            <h2 class="text-base font-bold text-gray-700 mb-3 border-b border-gray-100 pb-2">?? 日常待辦 (Daily To-Do)</h2>
+            <form id="form-daily" class="mb-4 bg-gray-50/50 p-3 rounded-lg border border-gray-100 shrink-0">
+                <div class="flex flex-col xl:flex-row gap-2">
+                    <input type="date" id="d-date" class="p-2 border border-gray-200 rounded text-sm w-full xl:w-1/3 outline-none focus:border-orange-300 focus:ring-1 focus:ring-orange-300 bg-white transition" required>
+                    <div class="flex gap-2 w-full xl:w-2/3">
+                        <input type="text" id="d-content" placeholder="日常待辦..." class="p-2 border border-gray-200 rounded text-sm flex-grow outline-none focus:border-orange-300 focus:ring-1 focus:ring-orange-300 bg-white transition" required>
+                        <button type="submit" class="bg-slate-700 text-white px-3 py-1 rounded hover:bg-slate-800 transition shadow-sm">+</button>
+                    </div>
+                </div>
+            </form>
+            <div id="list-daily" class="flex-grow overflow-y-auto pr-1 space-y-3"></div>
+        </section>
+
+        <!-- 第四欄：每日總任務 (煥然一新的暖色調) -->
+        <section class="bg-gradient-to-br from-amber-50 to-orange-100 rounded-xl shadow-md p-4 flex flex-col border border-orange-200 h-full overflow-hidden relative">
+            <!-- 裝飾背景圖形 -->
+            <div class="absolute -top-4 -right-4 w-24 h-24 bg-white/40 rounded-full blur-xl pointer-events-none"></div>
+            <div class="absolute -bottom-8 -left-8 w-32 h-32 bg-orange-200/40 rounded-full blur-2xl pointer-events-none"></div>
+            
+            <h2 class="text-base font-bold text-orange-800 mb-3 border-b border-orange-200/80 pb-2 relative z-10 flex items-center gap-2">
+                ?? 每日總任務 (Overview)
+            </h2>
+            <p class="text-xs text-orange-700/80 mb-4 shrink-0 relative z-10 font-medium">為您整理好的每日任務，一起優雅完成吧！</p>
+            <div id="list-overview" class="flex-grow overflow-y-auto pr-1 space-y-4 relative z-10"></div>
+        </section>
+
+    </main>
+
+    <!-- JavaScript 邏輯區 -->
+    <script>
+        let appState = {
+            assessments: [], 
+            preparations: [],
+            dailyTodos: []   
+        };
+
+        let isDirty = false;
+
+        window.addEventListener('beforeunload', (e) => {
+            if (isDirty) {
+                e.preventDefault();
+                e.returnValue = '您有未儲存的進度，確定要離開嗎？';
+            }
+        });
+
+        function markDirty() {
+            isDirty = true;
+            renderAll();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const todayStr = getTodayString();
+            document.getElementById('a-date').value = todayStr;
+            document.getElementById('p-date').value = todayStr;
+            document.getElementById('d-date').value = todayStr;
+            renderAll();
+        });
+
+        function getTodayString() {
+            const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+            return (new Date(Date.now() - tzoffset)).toISOString().split('T')[0];
+        }
+
+        function getTomorrowString() {
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const tzoffset = tomorrow.getTimezoneOffset() * 60000;
+            return (new Date(tomorrow.getTime() - tzoffset)).toISOString().split('T')[0];
+        }
+
+        function getDateHighlight(targetDate, isCompleted = false) {
+            const today = getTodayString();
+            const tomorrow = getTomorrowString();
+            
+            if (targetDate === today) {
+                return { 
+                    classes: 'bg-yellow-100/60 border-yellow-400', 
+                    label: '<span class="text-[10px] font-bold text-yellow-800 bg-yellow-300 px-1.5 py-0.5 rounded ml-2 shadow-sm">今日</span>' 
+                };
+            } else if (targetDate === tomorrow) {
+                return { 
+                    classes: 'bg-yellow-50/60 border-yellow-300', 
+                    label: '<span class="text-[10px] font-bold text-yellow-700 bg-yellow-200 px-1.5 py-0.5 rounded ml-2 shadow-sm">明日</span>' 
+                };
+            } else if (targetDate < today && !isCompleted) {
+                return { 
+                    classes: 'bg-red-50 border-red-300 border-dashed', 
+                    label: '<span class="text-[10px] font-bold text-red-700 bg-red-200 px-1.5 py-0.5 rounded ml-2 shadow-sm">已過期</span>' 
+                };
+            }
+            return { classes: 'border-transparent', label: '' };
+        }
+
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        // 客製化 Toast 提示功能 (取代 alert)
+        function showToast(msg, isError = false) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all duration-300 transform translate-x-10 opacity-0 flex items-center gap-2 ${isError ? 'bg-red-500' : 'bg-orange-500'}`;
+            toast.innerHTML = `<span>${msg}</span>`;
+            
+            container.appendChild(toast);
+            
+            // 觸發動畫
+            setTimeout(() => {
+                toast.classList.remove('translate-x-10', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // 客製化確認彈窗 (取代 confirm)
+        let pendingDeleteId = null;
+        function openConfirmModal(id) {
+            pendingDeleteId = id;
+            const modal = document.getElementById('confirm-modal');
+            const box = document.getElementById('confirm-modal-box');
+            modal.classList.remove('hidden');
+            // 觸發淡入動畫
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                box.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeConfirmModal() {
+            pendingDeleteId = null;
+            const modal = document.getElementById('confirm-modal');
+            const box = document.getElementById('confirm-modal-box');
+            modal.classList.add('opacity-0');
+            box.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200); // 等待過渡動畫完成
+        }
+
+        document.getElementById('confirm-delete-btn').addEventListener('click', () => {
+            if(pendingDeleteId) {
+                appState.assessments = appState.assessments.filter(a => a.id !== pendingDeleteId);
+                appState.preparations = appState.preparations.filter(p => p.assessmentId !== pendingDeleteId);
+                markDirty();
+                closeConfirmModal();
+                showToast('? 評估項目已刪除');
+            }
+        });
+
+        // Form Submissions
+        document.getElementById('form-assessment').addEventListener('submit', (e) => {
+            e.preventDefault();
+            appState.assessments.push({
+                id: generateId(),
+                child: document.getElementById('a-child').value,
+                date: document.getElementById('a-date').value,
+                title: document.getElementById('a-title').value
+            });
+            document.getElementById('a-title').value = ''; 
+            markDirty();
+        });
+
+        document.getElementById('form-prep').addEventListener('submit', (e) => {
+            e.preventDefault();
+            appState.preparations.push({
+                id: generateId(),
+                assessmentId: document.getElementById('p-assessmentId').value,
+                date: document.getElementById('p-date').value,
+                content: document.getElementById('p-content').value,
+                completed: false
+            });
+            document.getElementById('p-content').value = '';
+            markDirty();
+        });
+
+        document.getElementById('form-daily').addEventListener('submit', (e) => {
+            e.preventDefault();
+            appState.dailyTodos.push({
+                id: generateId(),
+                date: document.getElementById('d-date').value,
+                content: document.getElementById('d-content').value,
+                completed: false
+            });
+            document.getElementById('d-content').value = '';
+            markDirty();
+        });
+
+        // Direct Deletes for Prep and Daily
+        function deletePrep(id) {
+            appState.preparations = appState.preparations.filter(p => p.id !== id);
+            markDirty();
+        }
+        function togglePrep(id) {
+            const prep = appState.preparations.find(p => p.id === id);
+            if(prep) prep.completed = !prep.completed;
+            markDirty();
+        }
+        function deleteDaily(id) {
+            appState.dailyTodos = appState.dailyTodos.filter(d => d.id !== id);
+            markDirty();
+        }
+        function toggleDaily(id) {
+            const daily = appState.dailyTodos.find(d => d.id === id);
+            if(daily) daily.completed = !daily.completed;
+            markDirty();
+        }
+
+        /**
+         * Render UI
+         */
+        function renderAll() {
+            renderAssessments();
+            renderPrepDropdown(); 
+            renderPreparations();
+            renderDailyTodos();
+            renderOverview(); // 渲染第四欄
+        }
+
+        function renderAssessments() {
+            const container = document.getElementById('list-assessment');
+            container.innerHTML = '';
+            
+            const sorted = [...appState.assessments].sort((a, b) => new Date(a.date) - new Date(b.date));
+            if (sorted.length === 0) {
+                container.innerHTML = '<div class="text-gray-400 text-sm text-center py-4">尚無排定的評估項目</div>';
+                return;
+            }
+
+            sorted.forEach(item => {
+                const hl = getDateHighlight(item.date); 
+                // 確保顏色區分強烈：使用 Tailwind 原生翡翠綠 (Emerald) 與藍色 (Blue)
+                const colorConfig = item.child === 'C' 
+                    ? 'bg-emerald-50 text-emerald-900 border-emerald-400' 
+                    : 'bg-blue-50 text-blue-900 border-blue-400';
+                const avatar = item.child === 'C' ? '?? Chelsea' : '?? Joshua';
+
+                container.innerHTML += `
+                    <div class="flex items-start justify-between p-3 rounded-lg border-l-4 ${colorConfig} ${hl.classes} shadow-sm transition hover:shadow-md">
+                        <div>
+                            <div class="text-xs font-semibold mb-1 opacity-80">${item.date} ${hl.label}</div>
+                            <div class="font-medium text-sm flex items-center gap-2">
+                                <span class="bg-white/80 px-1.5 py-0.5 rounded text-xs font-bold border border-white/60 shadow-sm">${avatar}</span>
+                                ${item.title}
+                            </div>
+                        </div>
+                        <button onclick="openConfirmModal('${item.id}')" class="text-gray-400 hover:text-red-500 transition text-sm">?</button>
+                    </div>
+                `;
+            });
+        }
+
+        function renderPrepDropdown() {
+            const select = document.getElementById('p-assessmentId');
+            const currentVal = select.value;
+            select.innerHTML = '<option value="">-- 選擇關聯的評估項目 --</option>';
+            
+            const sorted = [...appState.assessments].sort((a, b) => new Date(a.date) - new Date(b.date));
+            sorted.forEach(a => {
+                const prefix = a.child === 'C' ? '?? Chelsea' : '?? Joshua';
+                select.innerHTML += `<option value="${a.id}">${a.date} | ${prefix} - ${a.title}</option>`;
+            });
+            if (appState.assessments.some(a => a.id === currentVal)) {
+                select.value = currentVal;
+            }
+        }
+
+        function renderPreparations() {
+            const container = document.getElementById('list-prep');
+            container.innerHTML = '';
+            
+            const sorted = [...appState.preparations].sort((a, b) => new Date(a.date) - new Date(b.date));
+            if (sorted.length === 0) {
+                container.innerHTML = '<div class="text-gray-400 text-sm text-center py-4">尚無準備事項</div>';
+                return;
+            }
+
+            sorted.forEach(item => {
+                const hl = getDateHighlight(item.date, item.completed);
+                const assessment = appState.assessments.find(a => a.id === item.assessmentId);
+                
+                let childName = '';
+                let tagClass = 'bg-gray-100 text-gray-500 border-gray-200';
+                if(assessment) {
+                    childName = assessment.child === 'C' ? 'Chelsea' : 'Joshua';
+                    // 標籤顏色強烈化
+                    tagClass = assessment.child === 'C' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-blue-100 text-blue-800 border-blue-200';
+                }
+                const tagText = assessment ? `${childName}: ${assessment.title}` : '未關聯的評估';
+                const textClass = item.completed ? 'strikethrough text-gray-400' : 'text-gray-800 font-medium';
+
+                container.innerHTML += `
+                    <div class="flex items-start gap-3 p-3 rounded-lg border bg-white/60 ${hl.classes} shadow-sm transition hover:shadow-md backdrop-blur-sm">
+                        <input type="checkbox" ${item.completed ? 'checked' : ''} onchange="togglePrep('${item.id}')" class="mt-1 w-4 h-4 cursor-pointer accent-orange-500">
+                        <div class="flex-grow">
+                            <div class="text-xs mb-1 text-gray-500">${item.date} ${hl.label}</div>
+                            <div class="text-sm ${textClass}">${item.content}</div>
+                            <div class="text-[10px] mt-1.5 font-bold px-1.5 py-0.5 rounded border shadow-sm inline-block ${tagClass}">${tagText}</div>
+                        </div>
+                        <button onclick="deletePrep('${item.id}')" class="text-gray-300 hover:text-red-500 transition text-sm">?</button>
+                    </div>
+                `;
+            });
+        }
+
+        function renderDailyTodos() {
+            const container = document.getElementById('list-daily');
+            container.innerHTML = '';
+            
+            const grouped = {};
+            [...appState.dailyTodos]
+                .sort((a, b) => new Date(a.date) - new Date(b.date))
+                .forEach(item => {
+                    if (!grouped[item.date]) grouped[item.date] = [];
+                    grouped[item.date].push(item);
+                });
+            
+            const dates = Object.keys(grouped).sort((a, b) => new Date(a) - new Date(b));
+
+            if (dates.length === 0) {
+                container.innerHTML = '<div class="text-gray-400 text-sm text-center py-4">無待辦事項，太棒了！?</div>';
+                return;
+            }
+
+            dates.forEach(date => {
+                const hl = getDateHighlight(date, true);
+                let groupHTML = `
+                    <div class="mb-3">
+                        <div class="text-xs font-bold text-orange-700 border-b border-orange-100 pb-1 mb-2 flex items-center">
+                            ?? ${date} ${hl.label}
+                        </div>
+                        <div class="space-y-2">
+                `;
+                
+                grouped[date].forEach(item => {
+                    const itemHl = getDateHighlight(item.date, item.completed);
+                    const textClass = item.completed ? 'strikethrough text-gray-400' : 'text-gray-700 font-medium';
+                    groupHTML += `
+                        <div class="flex items-center gap-3 p-2 rounded hover:bg-orange-50/50 transition border border-transparent ${itemHl.classes}">
+                            <input type="checkbox" ${item.completed ? 'checked' : ''} onchange="toggleDaily('${item.id}')" class="w-4 h-4 cursor-pointer accent-orange-500">
+                            <div class="flex-grow text-sm ${textClass}">${item.content}</div>
+                            <button onclick="deleteDaily('${item.id}')" class="text-gray-300 hover:text-red-500 transition text-xs">?</button>
+                        </div>
+                    `;
+                });
+                
+                groupHTML += `</div></div>`;
+                container.innerHTML += groupHTML;
+            });
+        }
+
+        /**
+         * 新增第四欄：總任務概覽 (煥然一新的亮眼設計)
+         */
+        function renderOverview() {
+            const container = document.getElementById('list-overview');
+            container.innerHTML = '';
+            
+            // 合併 Preparations 和 DailyTodos
+            const merged = [];
+            appState.preparations.forEach(p => merged.push({ ...p, source: 'prep' }));
+            appState.dailyTodos.forEach(d => merged.push({ ...d, source: 'daily' }));
+            
+            if (merged.length === 0) {
+                container.innerHTML = '<div class="text-orange-600/70 text-sm text-center py-8 font-medium">目前沒有任何需要執行的任務 ?</div>';
+                return;
+            }
+
+            // 按日期分組
+            const grouped = {};
+            merged.sort((a, b) => new Date(a.date) - new Date(b.date))
+                  .forEach(item => {
+                      if (!grouped[item.date]) grouped[item.date] = [];
+                      grouped[item.date].push(item);
+                  });
+            
+            const dates = Object.keys(grouped).sort((a, b) => new Date(a) - new Date(b));
+
+            dates.forEach(date => {
+                const hl = getDateHighlight(date, true); 
+                
+                let groupHTML = `
+                    <div class="mb-4 bg-white/70 backdrop-blur-md shadow-sm rounded-xl p-3 border border-orange-100 ${hl.classes}">
+                        <div class="text-sm font-bold text-orange-800 border-b border-orange-200/60 pb-2 mb-3 flex items-center">
+                            ?? ${date} ${hl.label}
+                        </div>
+                        <div class="space-y-3">
+                `;
+                
+                grouped[date].forEach(item => {
+                    const isCompleted = item.completed;
+                    const textClass = isCompleted ? 'strikethrough text-gray-400' : 'text-gray-800 font-bold';
+                    
+                    // 根據來源產生 Tag 與 點擊動作 (明亮清新的色彩)
+                    let tagHTML = '';
+                    let actionJS = '';
+                    if (item.source === 'prep') {
+                        const assessment = appState.assessments.find(a => a.id === item.assessmentId);
+                        const tagColor = assessment?.child === 'C' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-blue-100 text-blue-700 border-blue-200';
+                        const cName = assessment?.child === 'C' ? 'C' : 'J';
+                        tagHTML = `<span class="text-[10px] px-1.5 py-0.5 rounded border ml-2 shadow-sm ${tagColor}">?? 準備 (${cName})</span>`;
+                        actionJS = `togglePrep('${item.id}')`;
+                    } else {
+                        tagHTML = `<span class="text-[10px] px-1.5 py-0.5 rounded border border-orange-200 bg-orange-100 text-orange-700 ml-2 shadow-sm">?? 日常</span>`;
+                        actionJS = `toggleDaily('${item.id}')`;
+                    }
+
+                    groupHTML += `
+                        <div class="flex items-start gap-3 group p-1 rounded-lg hover:bg-white/50 transition">
+                            <input type="checkbox" ${isCompleted ? 'checked' : ''} onchange="${actionJS}" class="mt-0.5 w-4 h-4 cursor-pointer accent-orange-500">
+                            <div class="flex-grow text-sm ${textClass} leading-tight">
+                                ${item.content}
+                                <div class="mt-1.5">${tagHTML}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                groupHTML += `</div></div>`;
+                container.innerHTML += groupHTML;
+            });
+        }
+
+        // Export/Import JSON
+        function exportJSON() {
+            const dataStr = JSON.stringify(appState, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            
+            const dateStr = getTodayString().replace(/-/g, '');
+            
+            const a = document.createElement('a');
+            a.download = `kids-schedule-${dateStr}.json`;
+            a.href = url;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            isDirty = false;
+            showToast('?? 檔案已成功下載！');
+        }
+
+        function importJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed && Array.isArray(parsed.assessments) && Array.isArray(parsed.preparations) && Array.isArray(parsed.dailyTodos)) {
+                        appState = parsed;
+                        isDirty = false;
+                        renderAll();
+                        showToast('? 載入成功！您的進度已復原。');
+                    } else {
+                        showToast('? 檔案格式不符合！', true);
+                    }
+                } catch (err) {
+                    showToast('? 解析失敗，請確認檔案是否正確。', true);
+                }
+                event.target.value = ''; 
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
