@@ -359,21 +359,50 @@
 
             sorted.forEach(item => {
                 const hl = getDateHighlight(item.date); 
+                
+                // 找出關聯的工作進度
+                const linkedPreps = appState.preparations.filter(p => p.assessmentId === item.id);
+                const completedPreps = linkedPreps.filter(p => p.completed);
+                const progressText = linkedPreps.length > 0 ? `${completedPreps.length}/${linkedPreps.length}` : '0/0';
+                const isAllDone = linkedPreps.length > 0 && completedPreps.length === linkedPreps.length;
+
                 const colorConfig = item.child === 'C' 
                     ? 'bg-emerald-50 text-emerald-900 border-emerald-400' 
                     : 'bg-blue-50 text-blue-900 border-blue-400';
                 const avatar = item.child === 'C' ? '🧒 Chelsea' : '👦 Joshua';
 
+                // 生成已完成工作的具體內容標籤
+                let completedListHTML = '';
+                if (completedPreps.length > 0) {
+                    completedListHTML = `
+                        <div class="mt-2 pt-2 border-t border-black/5">
+                            <div class="text-[10px] uppercase font-bold tracking-wider opacity-60 mb-1">✅ 已完成：</div>
+                            <ul class="text-[11px] space-y-0.5">
+                                ${completedPreps.map(p => `<li class="flex items-center gap-1 opacity-75"><span>•</span><span class="truncate">${p.content}</span></li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+
                 container.innerHTML += `
-                    <div class="flex items-start justify-between p-3 rounded-lg border-l-4 ${colorConfig} ${hl.classes} shadow-sm transition hover:shadow-md">
-                        <div>
-                            <div class="text-xs font-semibold mb-1 opacity-80">${item.date} ${hl.label}</div>
-                            <div class="font-medium text-sm flex items-center gap-2">
-                                <span class="bg-white/80 px-1.5 py-0.5 rounded text-xs font-bold border border-white/60 shadow-sm">${avatar}</span>
-                                ${item.title}
+                    <div class="flex flex-col p-3 rounded-lg border-l-4 ${colorConfig} ${hl.classes} shadow-sm transition hover:shadow-md relative group">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <div class="text-xs font-semibold mb-1 opacity-80">${item.date} ${hl.label}</div>
+                                <div class="font-medium text-sm flex items-center gap-2">
+                                    <span class="bg-white/80 px-1.5 py-0.5 rounded text-xs font-bold border border-white/60 shadow-sm">${avatar}</span>
+                                    ${item.title}
+                                </div>
+                            </div>
+                            <div class="flex flex-col items-end gap-2">
+                                <button onclick="openConfirmModal('${item.id}')" class="text-gray-400 hover:text-red-500 transition text-sm">✖</button>
+                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isAllDone ? 'bg-emerald-500 text-white shadow-sm' : 'bg-gray-200 text-gray-600'}">
+                                    ${progressText}
+                                </span>
                             </div>
                         </div>
-                        <button onclick="openConfirmModal('${item.id}')" class="text-gray-400 hover:text-red-500 transition text-sm">✖</button>
+                        
+                        ${completedListHTML}
                     </div>
                 `;
             });
