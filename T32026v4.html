@@ -363,6 +363,7 @@
                 // 找出關聯的工作進度
                 const linkedPreps = appState.preparations.filter(p => p.assessmentId === item.id);
                 const completedPreps = linkedPreps.filter(p => p.completed);
+                const pendingPreps = linkedPreps.filter(p => !p.completed);
                 const progressText = linkedPreps.length > 0 ? `${completedPreps.length}/${linkedPreps.length}` : '0/0';
                 const isAllDone = linkedPreps.length > 0 && completedPreps.length === linkedPreps.length;
 
@@ -371,17 +372,34 @@
                     : 'bg-blue-50 text-blue-900 border-blue-400';
                 const avatar = item.child === 'C' ? '🧒 Chelsea' : '👦 Joshua';
 
-                // 生成已完成工作的具體內容標籤
-                let completedListHTML = '';
-                if (completedPreps.length > 0) {
-                    completedListHTML = `
-                        <div class="mt-2 pt-2 border-t border-black/5">
-                            <div class="text-[10px] uppercase font-bold tracking-wider opacity-60 mb-1">✅ 已完成：</div>
-                            <ul class="text-[11px] space-y-0.5">
-                                ${completedPreps.map(p => `<li class="flex items-center gap-1 opacity-75"><span>•</span><span class="truncate">${p.content}</span></li>`).join('')}
-                            </ul>
-                        </div>
-                    `;
+                // 生成關聯工作的具體內容標籤 (包含已完成與未完成)
+                let taskListHTML = '';
+                if (linkedPreps.length > 0) {
+                    taskListHTML += `<div class="mt-2 pt-2 border-t border-black/10 flex flex-col gap-1.5">`;
+                    
+                    if (pendingPreps.length > 0) {
+                        taskListHTML += `
+                            <div>
+                                <div class="text-[10px] font-bold text-orange-600/80 mb-0.5">⬜ 未做待辦：</div>
+                                <ul class="text-[11px] space-y-0.5">
+                                    ${pendingPreps.map(p => `<li class="flex items-start gap-1 text-gray-700"><span class="mt-[2px] opacity-50">•</span><span class="leading-tight break-words">${p.content}</span></li>`).join('')}
+                                </ul>
+                            </div>
+                        `;
+                    }
+                    
+                    if (completedPreps.length > 0) {
+                        taskListHTML += `
+                            <div>
+                                <div class="text-[10px] font-bold text-emerald-600/80 mb-0.5">✅ 已完成：</div>
+                                <ul class="text-[11px] space-y-0.5">
+                                    ${completedPreps.map(p => `<li class="flex items-start gap-1 text-gray-500 strikethrough"><span class="mt-[2px] opacity-50">•</span><span class="leading-tight break-words">${p.content}</span></li>`).join('')}
+                                </ul>
+                            </div>
+                        `;
+                    }
+                    
+                    taskListHTML += `</div>`;
                 }
 
                 container.innerHTML += `
@@ -402,7 +420,7 @@
                             </div>
                         </div>
                         
-                        ${completedListHTML}
+                        ${taskListHTML}
                     </div>
                 `;
             });
