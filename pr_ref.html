@@ -87,8 +87,8 @@
             text-align: left; 
             vertical-align: top; 
             width: 50%; 
-            white-space: pre-wrap; /* 確保預覽時也能顯示段落開頭的空格縮排 */
-            tab-size: 4; /* 設定網頁預覽的 Tab 寬度 */
+            white-space: pre-wrap; 
+            tab-size: 4; 
         }
         #preview th { 
             background-color: #f7f9fa; 
@@ -127,21 +127,35 @@
 </div>
 
 <script>
-    // 利用免費代理繞過瀏覽器跨區限制，加入備用代理機制
+    // 獲取內容的函數，增加了多種代理組合以繞過 GitHub Pages 的 CORS 限制
     async function fetchContent(url) {
         let htmlStr = null;
         
-        // 定義多個免費代理伺服器，自動輪詢以增加成功率
+        // 加上時間戳防止快取錯誤
+        const cleanUrl = url.split('?')[0];
+        const cacheBuster = `?t=${Date.now()}`;
+        const targetUrl = cleanUrl + cacheBuster;
+
         const proxies = [
-            { url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`, type: 'text' },
-            { url: `https://corsproxy.io/?${encodeURIComponent(url)}`, type: 'text' },
-            { url: `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, type: 'json' }
+            // 1. AllOrigins JSON 模式 (最穩定，但需解析 JSON)
+            { url: `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`, type: 'json' },
+            // 2. Corsproxy.io (簡單直接)
+            { url: `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`, type: 'text' },
+            // 3. Codetabs (備用)
+            { url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`, type: 'text' },
+            // 4. AllOrigins RAW 模式 (另一種呼叫方式)
+            { url: `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`, type: 'text' }
         ];
 
         for (const proxy of proxies) {
             try {
                 console.log(`正在嘗試代理: ${proxy.url}`);
-                const response = await fetch(proxy.url);
+                // 設定較短的 timeout 防止死等
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+                const response = await fetch(proxy.url, { signal: controller.signal });
+                clearTimeout(timeoutId);
                 
                 if (response.ok) {
                     if (proxy.type === 'json') {
@@ -151,18 +165,19 @@
                         htmlStr = await response.text();
                     }
                     
+                    // 檢查內容是否有效
                     if (htmlStr && htmlStr.length > 500) {
-                        console.log('代理連線成功！');
+                        console.log('✅ 成功從代理獲取資料');
                         break; 
                     }
                 }
             } catch (e) {
-                console.warn(`代理失敗: ${proxy.url}`, e);
+                console.warn(`❌ 代理失敗 (${proxy.url.split('/')[2]}):`, e.message);
             }
         }
 
         if (!htmlStr || htmlStr.length < 500) {
-            throw new Error('所有代理伺服器都無法連線或抓取不到有效內容');
+            throw new Error('所有代理伺服器連線失敗。這通常是因為政府網站暫時封鎖了代理伺服器，或者是您的網絡環境有限制。請稍後再試。');
         }
         
         try {
@@ -192,13 +207,14 @@
                 return text;
             }
             
-            const prTitleNode = doc.getElementById("pr_title") || doc.querySelector("h1");
+            const prTitleNode = doc.getElementById("pr_title") || doc.querySelector("h1") || doc.querySelector(".title");
             let bodyNode = doc.getElementById("pressrelease") || 
                            doc.querySelector(".pressrelease") ||
                            doc.getElementById("content") ||
                            doc.querySelector("#main") ||
                            doc.querySelector("main") ||
-                           doc.querySelector(".content");
+                           doc.querySelector(".content") ||
+                           doc.querySelector(".article-content");
             
             if (!bodyNode) {
                 const junk = doc.querySelectorAll("script, style, nav, header, footer, aside, .menu, #menu, .sidebar, #sidebar, iframe, noscript");
@@ -207,26 +223,23 @@
             }
 
             let fullText = "";
-            
             if (prTitleNode && !bodyNode.contains(prTitleNode)) {
                 fullText += extractTextWithNewlines(prTitleNode) + "\n";
             }
             fullText += extractTextWithNewlines(bodyNode);
             
-            // 按換行切割段落。改用 trimEnd() 確保清除行尾空白，但「原汁原味」保留行首原有的空格或 Tab
             let paras = fullText.split('\n')
-                .filter(p => p.trim().length > 0) // 過濾掉完全無字的空白行
-                .map(p => p.trimEnd()); // 保留前面的空白，只清掉後面的空白
+                .filter(p => p.trim().length > 0)
+                .map(p => p.trimEnd());
             
             return { title: pageTitle, paras: paras };
 
         } catch (error) {
             console.error("解析錯誤:", error);
-            throw new Error("成功抓取網頁，但解析內容失敗");
+            throw new Error("網頁抓取成功，但內容解析失敗。");
         }
     }
 
-    // 主要處理功能
     async function processUrls() {
         const zhUrl = document.getElementById('zhUrl').value.trim();
         const enUrl = document.getElementById('enUrl').value.trim();
@@ -237,14 +250,14 @@
 
         if (!zhUrl || !enUrl) {
             statusLabel.style.color = "#e74c3c";
-            statusLabel.innerText = "⚠️ 請填寫晒中英文兩條網址！";
+            statusLabel.innerText = "⚠️ 請填寫中英文網址！";
             return;
         }
 
         try {
             btn.disabled = true;
             statusLabel.style.color = "#2980b9";
-            statusLabel.innerText = "⏳ 正在跨網為你抓取資料，請稍候幾秒...";
+            statusLabel.innerText = "⏳ 正在嘗試多個代理伺服器抓取資料，請稍候...";
             previewTable.style.display = "none";
             previewBody.innerHTML = "";
 
@@ -253,15 +266,8 @@
                 fetchContent(enUrl)
             ]);
 
-            if (zhData.paras.length === 0 || enData.paras.length === 0) {
-                statusLabel.style.color = "#e74c3c";
-                statusLabel.innerText = "❌ 搵唔到新聞稿正文，請確定網址正不正確。";
-                btn.disabled = false;
-                return;
-            }
-
             statusLabel.style.color = "#27ae60";
-            statusLabel.innerText = "✅ 成功讀取內容！正在幫你畫格仔同匯出 Word...";
+            statusLabel.innerText = "✅ 成功讀取內容！正在生成 Word...";
 
             let realEnTitle = enData.title; 
             let realZhTitle = zhData.title;
@@ -298,7 +304,6 @@
             const zhStars = "＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊＊";
             const enStars = "********************************************";
 
-            // 合併：[真實標題, 星號分隔線, 原始網址, 真正的正文 (不再強制加 \t，保留原文排版)]
             const finalZhParas = [realZhTitle, zhStars, "網頁連結：" + zhUrl, ...cleanedZhParas];
             const finalEnParas = [realEnTitle, enStars, "Website URL: " + enUrl, ...cleanedEnParas];
 
@@ -315,36 +320,24 @@
             }
             previewTable.style.display = "table";
 
-            // 生成並下載 DOCX 檔案
             generateDocx(finalZhParas, finalEnParas, maxLen, docTitle);
             
             setTimeout(() => {
-                statusLabel.innerText = "🎉 大功告成！Word 檔案已經彈出下載。";
+                statusLabel.innerText = "🎉 檔案已生成並下載。";
             }, 1000);
 
         } catch (error) {
             statusLabel.style.color = "#e74c3c";
-            statusLabel.innerText = `❌ 發生錯誤：${error.message} (可能網址無效或被防火牆阻擋)`;
+            statusLabel.innerText = `❌ 錯誤：${error.message}`;
         } finally {
             btn.disabled = false;
         }
     }
 
-    // 將段落砌成 Word 雙列表格
     function generateDocx(zhParas, enParas, maxLen, docTitle) {
         const tableRows = [];
         
-        // 專門處理帶有 Tab (\t) 的段落，確保 Word 正確識別為真正的製表符
         const createParagraph = (text) => {
-            if (text.startsWith('\t')) {
-                return new docx.Paragraph({
-                    children: [
-                        new docx.TextRun("\t"), // 加入原生的 Tab 符號
-                        new docx.TextRun(text.substring(1)) // 接續剩下的文字
-                    ]
-                });
-            }
-            // 如果沒有 Tab（例如標題和星號線），就正常輸出
             return new docx.Paragraph({ text: text });
         };
         
@@ -357,12 +350,10 @@
                     children: [
                         new docx.TableCell({
                             width: { size: 50, type: docx.WidthType.PERCENTAGE },
-                            // 要求 2: 每段完結後加多一行空行
                             children: [createParagraph(zhText), new docx.Paragraph({ text: "" })],
                         }),
                         new docx.TableCell({
                             width: { size: 50, type: docx.WidthType.PERCENTAGE },
-                            // 要求 2: 每段完結後加多一行空行
                             children: [createParagraph(enText), new docx.Paragraph({ text: "" })],
                         }),
                     ],
@@ -372,21 +363,14 @@
 
         const doc = new docx.Document({
             sections: [{
-                // 要求 1: 版面設定邊界是上、下、左、右各 1cm (1cm 約為 567 twips)
                 properties: {
                     page: {
-                        margin: {
-                            top: 567,
-                            bottom: 567,
-                            left: 567,
-                            right: 567,
-                        },
+                        margin: { top: 567, bottom: 567, left: 567, right: 567 },
                     },
                 },
                 children: [
                     new docx.Table({
                         width: { size: 100, type: docx.WidthType.PERCENTAGE },
-                        // 要求 3: 表格框線全部用透明
                         borders: {
                             top: { style: docx.BorderStyle.NONE },
                             bottom: { style: docx.BorderStyle.NONE },
@@ -401,7 +385,6 @@
             }],
         });
 
-        // 觸發下載
         docx.Packer.toBlob(doc).then(blob => {
             saveAs(blob, `${docTitle}.docx`);
         });
