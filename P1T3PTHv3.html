@@ -11,7 +11,7 @@
   <!-- 載入 Babel 以便在瀏覽器中編譯 JSX -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <!-- 增加 Import Map 以強制統一 React 版本 -->
+  <!-- 增加 Import Map 以強制統一 React 版本，防止 CDN 衝突 -->
   <script type="importmap">
     {
       "imports": {
@@ -37,34 +37,39 @@
   <script type="text/babel" data-type="module">
     import React, { useState, useEffect, useMemo, useCallback } from 'react';
     import { createRoot } from 'react-dom/client';
-    import { Volume2, Star, BookOpen, Gamepad2, Search, ArrowRight, Sparkles, CheckCircle2, XCircle, Headphones, ArrowLeft } from 'lucide-react';
+    import { Volume2, Star, BookOpen, Gamepad2, Search, ArrowRight, Sparkles, CheckCircle2, XCircle, Headphones, ArrowLeft, HelpCircle } from 'lucide-react';
 
-    // --- Data Source ---
     const vocabData = {
       lesson1: [
-        { word: "生日", pinyin: "shēng rì" }, { word: "今年", pinyin: "jīn nián" }, { word: "年紀", pinyin: "nián jì" }, { word: "真棒", pinyin: "zhēn bàng" }, { word: "今天", pinyin: "jīn tiān" }, { word: "快樂", pinyin: "kuài lè" }, { word: "幾歲", pinyin: "jǐ suì" }, { word: "九號", pinyin: "jiǔ hào" }, { word: "休息", pinyin: "xiū xi" }
+        { word: "生日", pinyin: "shēng rì" }, { word: "今年", pinyin: "jīn nián" }, { word: "年紀", pinyin: "nián jì" }, { word: "真棒", pinyin: "zhēn bàng" }, { word: "今天", pinyin: "jīn tiān" }, { word: "快樂", pinyin: "kuài lè" }, { word: "幾歲", pinyin: "jǐ suì" }, { word: "九號", pinyin: "jiǔ hào" }, { word: "休息", pinyin: "xiū xi" },
+        { word: "堂姐", pinyin: "táng jiě" }, { word: "歲", pinyin: "suì" }, { word: "號", pinyin: "hào" }, { word: "猜", pinyin: "cāi" }, { word: "棒", pinyin: "bàng" }, { word: "二月", pinyin: "èr yuè" }, { word: "時候", pinyin: "shí hou" }, { word: "奶奶", pinyin: "nǎi nai" }, { word: "多大", pinyin: "duō dà" }, { word: "幾歲了", pinyin: "jǐ suì le" }, { word: "猜猜", pinyin: "cāi cai" }, { word: "猜對了", pinyin: "cāi duì le" }
       ],
       lesson2: [
-        { word: "屬貓", pinyin: "shǔ māo" }, { word: "老鼠", pinyin: "lǎo shǔ" }, { word: "生肖", pinyin: "shēng xiào" }, { word: "節日", pinyin: "jié rì" }, { word: "倒數", pinyin: "dào shǔ" }, { word: "後面", pinyin: "hòu miàn" }, { word: "裝飾", pinyin: "zhuāng shì" }, { word: "捉", pinyin: "zhuō" }, { word: "別吃我", pinyin: "bié chī wǒ" }
+        { word: "屬貓", pinyin: "shǔ māo" }, { word: "老鼠", pinyin: "lǎo shǔ" }, { word: "生肖", pinyin: "shēng xiào" }, { word: "節日", pinyin: "jié rì" }, { word: "倒數", pinyin: "dào shǔ" }, { word: "後面", pinyin: "hòu miàn" }, { word: "裝飾", pinyin: "zhuāng shì" }, { word: "捉", pinyin: "zhuō" }, { word: "別吃我", pinyin: "bié chī wǒ" },
+        { word: "屬", pinyin: "shǔ" }, { word: "貓", pinyin: "māo" }, { word: "鼠", pinyin: "shǔ" }, { word: "媽媽", pinyin: "mā ma" }, { word: "哥哥", pinyin: "gē ge" }, { word: "十二生肖", pinyin: "shí èr shēng xiào" }, { word: "好看", pinyin: "hǎo kàn" }, { word: "捉住", pinyin: "zhuō zhù" }, { word: "這兒", pinyin: "zhè r" }, { word: "就是", pinyin: "jiù" }, { word: "第一", pinyin: "dì yī" }, { word: "甚麼", pinyin: "shén me" }
       ],
       lesson3: [
-        { word: "比高", pinyin: "bǐ gāo" }, { word: "明年", pinyin: "míng nián" }, { word: "班長", pinyin: "bān zhǎng" }, { word: "去年", pinyin: "qù nián" }, { word: "早起", pinyin: "zǎo qǐ" }, { word: "一行", pinyin: "yì háng" }, { word: "矮", pinyin: "ǎi" }, { word: "藍色", pinyin: "lán sè" }
+        { word: "比高", pinyin: "bǐ gāo" }, { word: "明年", pinyin: "míng nián" }, { word: "班長", pinyin: "bān zhǎng" }, { word: "去年", pinyin: "qù nián" }, { word: "早起", pinyin: "zǎo qǐ" }, { word: "一行", pinyin: "yì háng" }, { word: "矮", pinyin: "ǎi" }, { word: "藍色", pinyin: "lán sè" },
+        { word: "比", pinyin: "bǐ" }, { word: "高", pinyin: "gāo" }, { word: "從", pinyin: "cóng" }, { word: "行", pinyin: "háng" }, { word: "長", pinyin: "zhǎng" }, { word: "最", pinyin: "zuì" }, { word: "大家", pinyin: "dà jiā" }, { word: "全班", pinyin: "quán bān" }, { word: "排成", pinyin: "pái chéng" }, { word: "長得快", pinyin: "zhǎng de kuài" }, { word: "站在", pinyin: "zhàn zài" }, { word: "明明", pinyin: "míng míng" }, { word: "可能", pinyin: "kě néng" }, { word: "最高", pinyin: "zuì gāo" }, { word: "高多了", pinyin: "gāo duō le" }
       ],
       lesson4: [
-        { word: "分出來", pinyin: "fēn chu lai" }, { word: "作業", pinyin: "zuò yè" }, { word: "鼻子", pinyin: "bí zi" }, { word: "模樣", pinyin: "mú yàng" }, { word: "認錯", pinyin: "rèn cuò" }, { word: "眼睛", pinyin: "yǎn jing" }, { word: "很滿", pinyin: "hěn mǎn" }, { word: "竿", pinyin: "gān" }
+        { word: "分出來", pinyin: "fēn chu lai" }, { word: "作業", pinyin: "zuò yè" }, { word: "鼻子", pinyin: "bí zi" }, { word: "模樣", pinyin: "mú yàng" }, { word: "認錯", pinyin: "rèn cuò" }, { word: "眼睛", pinyin: "yǎn jing" }, { word: "很滿", pinyin: "hěn mǎn" }, { word: "竿", pinyin: "gān" },
+        { word: "雙胞胎", pinyin: "shuāng bāo tāi" }, { word: "作業本", pinyin: "zuò yè bèn" }, { word: "錯", pinyin: "cuò" }, { word: "爸爸", pinyin: "bà ba" }, { word: "媽媽", pinyin: "mā ma" }, { word: "大眼睛", pinyin: "dà yǎn jing" }, { word: "高鼻子", pinyin: "gāo bí zi" }, { word: "一模一樣", pinyin: "yì mú yí yàng" }, { word: "長得", pinyin: "zhǎng de" }, { word: "怎麼", pinyin: "zěn me" }
       ],
       lesson5: [
-        { word: "郊遊", pinyin: "jiāo yóu" }, { word: "取消", pinyin: "qǔ xiāo" }, { word: "擔心", pinyin: "dān xīn" }, { word: "天氣", pinyin: "tiān qì" }, { word: "預報", pinyin: "yù bào" }, { word: "中午", pinyin: "zhōng wǔ" }, { word: "戴帽", pinyin: "dài mào" }, { word: "燈", pinyin: "dēng" }
+        { word: "郊遊", pinyin: "jiāo yóu" }, { word: "取消", pinyin: "qǔ xiāo" }, { word: "擔心", pinyin: "dān xīn" }, { word: "天氣", pinyin: "tiān qì" }, { word: "預報", pinyin: "yù bào" }, { word: "中午", pinyin: "zhōng wǔ" }, { word: "戴帽", pinyin: "dài mào" }, { word: "燈", pinyin: "dēng" },
+        { word: "怕", pinyin: "pà" }, { word: "晴天", pinyin: "qíng tiān" }, { word: "曬", pinyin: "shài" }, { word: "明天", pinyin: "míng tiān" }, { word: "學校", pinyin: "xué xiào" }, { word: "雨", pinyin: "yǔ" }, { word: "糖", pinyin: "táng" }, { word: "天氣預報", pinyin: "tiān qì yù bào" }, { word: "帽子", pinyin: "mào zi" }, { word: "買", pinyin: "mǎi" }, { word: "戴", pinyin: "dài" }, { word: "真大", pinyin: "zhēn dà" }, { word: "一大包", pinyin: "yí dà bāo" }, { word: "怎麼辦", pinyin: "zěn me bàn" }
       ]
     };
 
-    // Flatten data for random selection
     const allVocab = Object.values(vocabData).flat();
 
-    // --- Helper Functions ---
     const speak = (text, rate = 0.85) => {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel(); 
+        window.currentSpeakSession = Date.now();
+        if (window.dialogueTimeout) clearTimeout(window.dialogueTimeout);
+
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'zh-CN'; 
         utterance.rate = rate; 
@@ -76,6 +81,57 @@
         }
         window.speechSynthesis.speak(utterance);
       }
+    };
+
+    const speakDialogue = (dialogueText) => {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel(); 
+      
+      const currentSession = Date.now();
+      window.currentSpeakSession = currentSession;
+      if (window.dialogueTimeout) clearTimeout(window.dialogueTimeout);
+
+      const lines = dialogueText.split('\n').filter(line => line.trim() !== '');
+      const voices = window.speechSynthesis.getVoices().filter(v => v.lang.includes('zh'));
+      const voice1 = voices.find(v => v.name.includes('Xiaoxiao') || v.name.includes('Ting-Ting')) || voices[0];
+      const voice2 = voices.find(v => v.name.includes('Yunxi') || v.name.includes('Yating') || (v !== voice1)) || voice1;
+
+      let currentLineIndex = 0;
+
+      const playNextLine = () => {
+        if (currentLineIndex >= lines.length || window.currentSpeakSession !== currentSession) return;
+
+        const utterance = new SpeechSynthesisUtterance(lines[currentLineIndex]);
+        utterance.lang = 'zh-CN';
+        
+        if (currentLineIndex % 2 === 0) {
+          utterance.voice = voice1;
+          utterance.pitch = 1.3; 
+          utterance.rate = 0.6;  // 統一語速改為 0.6
+        } else {
+          utterance.voice = voice2;
+          utterance.pitch = (voice1 === voice2) ? 0.75 : 1.0; 
+          utterance.rate = 0.6;  // 統一語速改為 0.6
+        }
+
+        utterance.onend = () => {
+          currentLineIndex++;
+          if (currentLineIndex < lines.length && window.currentSpeakSession === currentSession) {
+            window.dialogueTimeout = setTimeout(playNextLine, 1000); // 停頓 1 秒
+          }
+        };
+
+        utterance.onerror = () => {
+          currentLineIndex++;
+          if (currentLineIndex < lines.length && window.currentSpeakSession === currentSession) {
+            playNextLine();
+          }
+        };
+
+        window.speechSynthesis.speak(utterance);
+      };
+
+      playNextLine();
     };
 
     const shuffleArray = (array) => [...array].sort(() => Math.random() - 0.5);
@@ -118,15 +174,13 @@
 
     const getPinyinSpeechText = (pinyinCode) => {
       const pinyinMap = {
-        'j': 'jī', 'q': 'qī', 'x': 'xī',
-        'zh': 'zhī', 'ch': 'chī', 'sh': 'shī', 'r': 'rì',
-        'z': 'zī', 'c': 'cī', 's': 'sī',
-        'an': 'ān', 'en': 'ēn', 'ang': 'āng', 'eng': 'ēng', 'ong': 'ōng'
+        'j': '機', 'q': '七', 'x': '西',
+        'zh': '知', 'ch': '吃', 'sh': '詩', 'r': '日',
+        'z': '資', 'c': '疵', 's': '思',
+        'an': '安', 'en': '恩', 'ang': '骯', 'eng': '鞥', 'ong': '嗡'
       };
       return pinyinMap[pinyinCode] || pinyinCode;
     };
-
-    // --- Components ---
 
     const ListenLearn = () => {
       const [selectedLesson, setSelectedLesson] = useState('lesson1');
@@ -164,7 +218,7 @@
                   <p className="text-2xl text-blue-500 font-bold">{item.pinyin}</p>
                 </div>
                 <button
-                  onClick={() => speak(item.word, 0.4)}
+                  onClick={() => speak(item.word, 0.4)} // 語速放慢至0.4
                   className="bg-blue-400 text-white p-5 rounded-full shadow-md hover:bg-blue-500 transition-transform transform hover:scale-110 active:scale-90"
                 >
                   <Volume2 size={36} />
@@ -206,7 +260,7 @@
             <div className="absolute bottom-4 right-4 text-yellow-200"><Star size={48} /></div>
 
             <button 
-               onClick={() => speak(currentItem.char)}
+               onClick={() => speak(currentItem.char, 0.4)}
                className="mx-auto bg-gray-100 rounded-full p-3 mb-4 hover:bg-blue-100 transition-colors"
             >
               <Volume2 size={28} className="text-blue-500" />
@@ -243,11 +297,15 @@
 
     const PhoneticsPractice = () => {
       const soundGroups = [
-        { id: 'jqx', title: '舌面音辨析', options: ['j', 'q', 'x'], type: 'initial' },
-        { id: 'zhchshr', title: '翹舌音辨析', options: ['zh', 'ch', 'sh', 'r'], type: 'initial' },
-        { id: 'zcs', title: '平舌音辨析', options: ['z', 'c', 's'], type: 'initial' },
-        { id: 'anen', title: '前鼻韻母辨析', options: ['an', 'en'], type: 'final' },
-        { id: 'angengong', title: '後鼻韻母辨析', options: ['ang', 'eng', 'ong'], type: 'final' }
+        { id: 'jqx', title: '舌面音辨析 (j / q / x)', options: ['j', 'q', 'x'], type: 'initial' },
+        { id: 'zhchshr', title: '翹舌音辨析 (zh / ch / sh / r)', options: ['zh', 'ch', 'sh', 'r'], type: 'initial' },
+        { id: 'zcs', title: '平舌音辨析 (z / c / s)', options: ['z', 'c', 's'], type: 'initial' },
+        { id: 'qcch', title: '精細辨析 (q / c / ch)', options: ['q', 'c', 'ch'], type: 'initial' },
+        { id: 'xssh', title: '精細辨析 (x / s / sh)', options: ['x', 's', 'sh'], type: 'initial' },
+        { id: 'zjzh', title: '精細辨析 (z / j / zh)', options: ['z', 'j', 'zh'], type: 'initial' },
+        { id: 'all_mix', title: '超級無敵大挑戰 (q / c / ch / x / s / sh / z / j / zh)', options: ['q', 'c', 'ch', 'x', 's', 'sh', 'z', 'j', 'zh'], type: 'initial' },
+        { id: 'anen', title: '前鼻韻母辨析 (an / en)', options: ['an', 'en'], type: 'final' },
+        { id: 'angengong', title: '後鼻韻母辨析 (ang / eng / ong)', options: ['ang', 'eng', 'ong'], type: 'final' }
       ];
 
       const [mode, setMode] = useState('menu'); 
@@ -355,7 +413,7 @@
                   onClick={() => { setActiveGroup(group); setMode('study'); }}
                   className="bg-white hover:bg-purple-50 border-4 border-transparent hover:border-purple-300 p-8 rounded-3xl shadow-md transition-all transform hover:scale-105 flex flex-col items-center gap-4"
                 >
-                  <h3 className="text-3xl font-black text-gray-700">{group.title}</h3>
+                  <h3 className="text-2xl font-black text-gray-700">{group.title}</h3>
                   <p className="text-xl font-bold text-purple-500">{group.options.join(' / ')}</p>
                 </button>
               ))}
@@ -378,7 +436,7 @@
               <h2 className="text-3xl font-black text-gray-800 mb-2">{activeGroup.title}</h2>
               <p className="text-gray-500 mb-8">點擊單字聽聽看，找找它們的規律！準備好了就開始挑戰。</p>
 
-              <div className={`grid gap-6 mb-10 ${activeGroup.options.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3 lg:grid-cols-4'}`}>
+              <div className={`grid gap-6 mb-10 ${activeGroup.options.length <= 3 ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1 md:grid-cols-4'}`}>
                 {activeGroup.options.map(opt => (
                   <div key={opt} className="bg-purple-50 rounded-3xl p-6 border-t-8 border-purple-300 shadow-sm">
                     <h3 className="text-5xl font-black text-purple-600 mb-6">{opt}</h3>
@@ -387,7 +445,7 @@
                         allGroupsData[activeGroup.id][opt].map((item, i) => (
                           <button 
                             key={i} 
-                            onClick={() => speak(item.char, 0.6)} 
+                            onClick={() => speak(item.char, 0.4)} // 語速也放慢為0.4
                             className="bg-white border-2 border-purple-100 px-4 py-2 rounded-2xl text-2xl font-black text-gray-700 hover:bg-purple-200 hover:border-purple-300 transition-transform transform hover:scale-110 active:scale-95 flex flex-col items-center shadow-sm"
                           >
                             <span>{item.char}</span>
@@ -395,7 +453,7 @@
                           </button>
                         ))
                       ) : (
-                        <span className="text-gray-400 font-bold">本課暫無此拼音詞語</span>
+                        <span className="text-gray-400 font-bold text-sm">本課暫無此拼音詞語</span>
                       )}
                     </div>
                   </div>
@@ -415,7 +473,7 @@
 
       if (mode === 'quiz' && quizQuestion) {
         const optionsToShow = quizQuestion.parentGroup.options;
-        const title = activeGroup ? activeGroup.title + '測驗' : '🏆 綜合聽音大挑戰';
+        const title = activeGroup ? activeGroup.title : '🏆 綜合聽音大挑戰';
 
         return (
           <div className="max-w-3xl mx-auto text-center">
@@ -459,7 +517,7 @@
 
               <div className="mb-12">
                 <button 
-                  onClick={() => speak(quizQuestion.char, 0.4)}
+                  onClick={() => speak(quizQuestion.char, 0.4)} // 聽音特訓語速放慢到 0.4
                   className="bg-purple-400 hover:bg-purple-500 text-white p-10 rounded-full shadow-lg transform transition hover:scale-110 active:scale-95 animate-pulse mx-auto block"
                 >
                   <Volume2 size={80} />
@@ -467,12 +525,13 @@
                 <p className="mt-6 text-2xl font-bold text-gray-500">🎧 仔細聽，剛才念的字包含哪一個音？</p>
               </div>
 
-              <div className="flex flex-wrap justify-center gap-6">
+              {/* 選項區：針對超级大挑戰（9個選項）特殊處理，保持按鈕整齊與大觸控區 */}
+              <div className="flex flex-wrap justify-center gap-4">
                 {optionsToShow.map(opt => (
                   <button
                     key={opt}
                     onClick={() => handleGuess(opt)}
-                    className="bg-gray-50 border-4 border-gray-100 hover:border-purple-400 hover:bg-purple-50 text-5xl font-black text-gray-700 w-32 h-32 rounded-3xl shadow-sm transition-all transform hover:scale-110 active:scale-95 flex items-center justify-center"
+                    className="bg-gray-50 border-4 border-gray-100 hover:border-purple-400 hover:bg-purple-50 text-4xl font-black text-gray-700 w-24 h-24 rounded-3xl shadow-sm transition-all transform hover:scale-110 active:scale-95 flex items-center justify-center"
                   >
                     {opt}
                   </button>
@@ -484,6 +543,230 @@
       }
 
       return null;
+    };
+
+    const ComprehensionQuiz = () => {
+      const [selectedLesson, setSelectedLesson] = useState('lesson1');
+      const [currentQIndex, setCurrentQIndex] = useState(0);
+      const [score, setScore] = useState(0);
+      const [feedback, setFeedback] = useState(null);
+
+      const lessons = [
+        { id: 'lesson1', name: '第一課' },
+        { id: 'lesson2', name: '第二課' },
+        { id: 'lesson3', name: '第三課' },
+        { id: 'lesson4', name: '第四課' },
+        { id: 'lesson5', name: '第五課' }
+      ];
+
+      const compData = {
+        lesson1: [
+          { 
+            dialogue: "「堂姐，生日快樂！你今年幾歲了？」\n「我今年七歲。小琪，你甚麼時候生日？」\n「我二月九號生日。」",
+            q: "小琪今年幾歲？", answer: "七歲", options: ["七歲", "九歲", "六十歲"] 
+          },
+          { 
+            dialogue: "「堂姐，生日快樂！你今年幾歲了？」\n「我今年七歲。小琪，你甚麼時候生日？」\n「我二月九號生日。」",
+            q: "小琪的生日是幾月幾號？", answer: "二月九號", options: ["二月九號", "三月八號", "二月十號"] 
+          },
+          { 
+            dialogue: "「奶奶，您多大年紀了？」\n「你猜猜吧！」\n「六十歲？」\n「猜對了，真棒！」",
+            q: "奶奶今年多大年紀？", answer: "六十歲", options: ["六十歲", "五十歲", "七十歲"] 
+          }
+        ],
+        lesson2: [
+          { 
+            dialogue: "「這兒的節日裝飾真好看！」\n「我屬鼠。媽媽，您呢？」\n「倒數第一的就是我的生肖。」",
+            q: "偉平屬甚麼生肖？", answer: "屬鼠", options: ["屬鼠", "屬牛", "屬貓"] 
+          },
+          { 
+            dialogue: "「這兒的節日裝飾真好看！」\n「我屬鼠。媽媽，您呢？」\n「倒數第一的就是我的生肖。」",
+            q: "媽媽的生肖排在第幾？", answer: "倒數第一", options: ["倒數第一", "第一", "倒數第二"] 
+          },
+          { 
+            dialogue: "「我想屬貓，捉住哥哥！」\n「別吃我！可十二生肖裏哪有貓哇？」\n「那我屬甚麼？」\n「你的生肖在我後面。」",
+            q: "妹妹為甚麼說想屬貓？", answer: "因為她想捉住哥哥", options: ["因為她想捉住哥哥", "因為貓很可愛", "因為貓會捉老鼠"] 
+          },
+          { 
+            dialogue: "「我想屬貓，捉住哥哥！」\n「別吃我！可十二生肖裏哪有貓哇？」\n「那我屬甚麼？」\n「你的生肖在我後面。」",
+            q: "十二生肖裏面有沒有貓？", answer: "沒有", options: ["沒有", "有", "只有十一隻"] 
+          }
+        ],
+        lesson3: [
+          { 
+            dialogue: "「大家從矮到高排成一行。」\n「心怡，我比你高，該站在你後面。」\n「欸，你去年明明比我矮呀！」",
+            q: "老師要求大家排隊時要怎麼排？", answer: "從矮到高排成一行", options: ["從矮到高排成一行", "從高到矮排成一行", "隨便排成一行"] 
+          },
+          { 
+            dialogue: "「大家從矮到高排成一行。」\n「心怡，我比你高，該站在你後面。」\n「欸，你去年明明比我矮呀！」",
+            q: "去年思聰比心怡高還是矮？", answer: "比較矮", options: ["比較矮", "比較高", "一樣高"] 
+          },
+          { 
+            dialogue: "「欸，你去年明明比我矮呀！」\n「思聰今年比去年高多了。」\n「是啊，我長得快，可能明年就是全班最高的啦！」",
+            q: "思聰覺得自己明年可能會變成怎樣？", answer: "全班最高的", options: ["全班最高的", "全班最矮的", "全班最胖的"] 
+          }
+        ],
+        lesson4: [
+          { 
+            dialogue: "「子安，這是你的作業本。」\n「你認錯啦，我是子聰啊！」\n「你跟子安長得一模一樣，大眼睛，高鼻子。」",
+            q: "心怡本來想把作業本交給誰，卻認錯了人？", answer: "子安", options: ["子安", "子聰", "老師"] 
+          },
+          { 
+            dialogue: "「子安，這是你的作業本。」\n「你認錯啦，我是子聰啊！」\n「你跟子安長得一模一樣，大眼睛，高鼻子。」",
+            q: "課文中形容子安和子聰長得怎麼樣？", answer: "一模一樣，大眼睛，高鼻子", options: ["一模一樣，大眼睛，高鼻子", "完全不同，小眼睛，塌鼻子", "一個高一個矮"] 
+          },
+          { 
+            dialogue: "「你跟子安長得一模一樣，大眼睛，高鼻子。」\n「我們是雙胞胎嘛！」\n「你爸爸、媽媽怎麼把你們分出來呀？」",
+            q: "為甚麼子聰 and 子安長得一模一樣？", answer: "因為他們是雙胞胎", options: ["因為他們是雙胞胎", "因為他們是好朋友", "因為他們是表兄弟"] 
+          }
+        ],
+        lesson5: [
+          { 
+            dialogue: "「雨真大！我怕明天學校的郊遊會取消。」\n「唉，我還買了一大包糖，怎麼辦呢？」\n「別擔心！天氣預報說明天是晴天。」",
+            q: "小朋友擔心明天的甚麼活動會被取消？", answer: "學校的郊遊", options: ["學校的郊遊", "體育課", "游泳比賽"] 
+          },
+          { 
+            dialogue: "「雨真大！我怕明天學校的郊遊會取消。」\n「唉，我還買了一大包糖，怎麼辦呢？」\n「別擔心！天氣預報說明天是晴天。」",
+            q: "天氣預報說明天的天氣會怎麼樣？", answer: "晴天", options: ["晴天", "雨天", "陰天"] 
+          },
+          { 
+            dialogue: "「別擔心！天氣預報說明天是晴天。」\n「可我又怕中午太曬！」\n「你戴一頂帽子不就成了！」",
+            q: "雖然知道明天是晴天，但小朋友又怕甚麼？", answer: "怕中午太曬", options: ["怕中午太曬", "怕下雨", "怕沒有糖果吃"] 
+          },
+          { 
+            dialogue: "「別擔心！天氣預報說明天是晴天。」\n「可我又怕中午太曬！」\n「你戴一頂帽子不就成了！」",
+            q: "為了怕曬，媽媽建議他怎麼做？", answer: "戴一頂帽子", options: ["戴一頂帽子", "穿雨衣", "帶雨傘"] 
+          }
+        ]
+      };
+
+      const currentQuestions = compData[selectedLesson];
+      const question = currentQuestions[currentQIndex];
+
+      const shuffledOptions = useMemo(() => {
+        if (!question) return [];
+        return shuffleArray([...question.options]);
+      }, [question]);
+
+      const handleLessonChange = (id) => {
+        setSelectedLesson(id);
+        setCurrentQIndex(0);
+        setFeedback(null);
+      };
+
+      const handleOptionClick = (option) => {
+        if (feedback) return;
+
+        if (option === question.answer) {
+          setFeedback('correct');
+          setScore(s => s + 10);
+          speak('答對啦！', 0.6); // 提示音放慢
+          setTimeout(() => {
+            setFeedback(null);
+            if (currentQIndex < currentQuestions.length - 1) {
+              setCurrentQIndex(i => i + 1);
+            } else {
+              speak('你已經完成這一課的練習了！', 0.6);
+              setCurrentQIndex(0); 
+            }
+          }, 2000);
+        } else {
+          setFeedback('wrong');
+          speak('再試一次', 0.6);
+          setTimeout(() => { setFeedback(null); }, 1500);
+        }
+      };
+
+      return (
+        <div className="space-y-6 max-w-4xl mx-auto text-center">
+          
+          <div className="flex flex-wrap gap-3 justify-center mb-8">
+            {lessons.map(lesson => (
+              <button
+                key={lesson.id}
+                onClick={() => handleLessonChange(lesson.id)}
+                className={`px-6 py-3 rounded-full text-xl font-bold shadow-sm transition-all transform hover:scale-105 active:scale-95 ${
+                  selectedLesson === lesson.id
+                    ? 'bg-orange-400 text-white border-4 border-orange-200'
+                    : 'bg-white text-gray-600 hover:bg-orange-100'
+                }`}
+              >
+                {lesson.name}
+              </button>
+            ))}
+          </div>
+
+          <div className="bg-yellow-300 inline-flex items-center gap-3 px-8 py-3 rounded-full text-2xl font-black text-yellow-900 shadow-md mb-4">
+            <Star size={32} className="fill-yellow-500 text-yellow-600" /> 
+            分數: {score} 分
+          </div>
+
+          <div className="bg-white rounded-[3rem] shadow-xl p-8 md:p-12 border-b-[12px] border-orange-200 relative overflow-hidden">
+            
+            {feedback === 'correct' && (
+              <div className="absolute inset-0 bg-green-100 bg-opacity-95 z-10 flex flex-col items-center justify-center animate-bounce">
+                <CheckCircle2 size={120} className="text-green-500 mb-4" />
+                <h2 className="text-5xl font-black text-green-600">答對啦！</h2>
+              </div>
+            )}
+            {feedback === 'wrong' && (
+              <div className="absolute inset-0 bg-red-50 bg-opacity-95 z-10 flex flex-col items-center justify-center">
+                <XCircle size={100} className="text-red-400 mb-4 animate-pulse" />
+                <h2 className="text-4xl font-black text-red-500">哎呀，再想想看！</h2>
+              </div>
+            )}
+
+            <div className="mb-4 text-orange-400 font-bold text-xl tracking-widest">
+              題目 {currentQIndex + 1} / {currentQuestions.length}
+            </div>
+
+            {/* 對話情境展示區 */}
+            <div className="bg-orange-50 rounded-3xl p-6 md:p-8 mb-6 shadow-inner text-left border-l-8 border-orange-300 relative">
+              <div className="flex items-center gap-4 mb-4">
+                <button 
+                  onClick={() => speakDialogue(question.dialogue)}
+                  className="bg-orange-200 hover:bg-orange-300 text-orange-700 p-4 rounded-full transition-transform transform hover:scale-110 active:scale-95"
+                >
+                  <Volume2 size={32} />
+                </button>
+                <h3 className="text-2xl font-bold text-orange-700">📖 聽聽看這段對話：</h3>
+              </div>
+              <p className="text-xl md:text-2xl text-gray-700 font-medium whitespace-pre-line leading-relaxed pl-4">
+                {question.dialogue}
+              </p>
+            </div>
+
+            {/* 題目區域 */}
+            <div className="bg-white border-4 border-orange-100 rounded-3xl p-6 mb-8 flex flex-col md:flex-row items-center gap-6">
+              <button 
+                onClick={() => speak(question.q, 0.6)} // 課文問題語速設為0.6
+                className="bg-orange-400 hover:bg-orange-500 text-white p-5 rounded-full shadow-md transform transition hover:scale-110 active:scale-95 flex-shrink-0"
+              >
+                <Volume2 size={36} />
+              </button>
+              <h2 className="text-3xl font-black text-gray-800 text-left">
+                {question.q}
+              </h2>
+            </div>
+
+            {/* 選項區域 */}
+            <div className="grid grid-cols-1 gap-4">
+              {shuffledOptions.map((option, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleOptionClick(option)}
+                  className="bg-white border-4 border-orange-100 hover:border-orange-400 hover:bg-orange-50 text-2xl font-bold text-gray-700 py-6 px-8 rounded-3xl shadow-sm transition-all transform hover:scale-105 active:scale-95 text-left flex items-center gap-4"
+                >
+                  <div className="bg-orange-200 text-orange-700 rounded-full w-12 h-12 flex items-center justify-center text-xl flex-shrink-0">
+                    {['A', 'B', 'C'][idx]}
+                  </div>
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
     };
 
     const QuizTime = () => {
@@ -561,7 +844,7 @@
             <div className="mb-10 min-h-[120px] flex items-center justify-center">
               {question.type === 1 ? (
                 <button 
-                  onClick={() => speak(question.target.word)}
+                  onClick={() => speak(question.target.word, 0.4)} // 綜合測驗聽聲音也放慢到0.4
                   className="bg-blue-400 hover:bg-blue-500 text-white p-8 rounded-full shadow-lg transform transition hover:scale-110 active:scale-95 animate-pulse"
                 >
                   <Volume2 size={64} />
@@ -594,39 +877,47 @@
         { id: 'listen', label: '發音認字卡', icon: <BookOpen size={24} />, color: 'bg-blue-400 hover:bg-blue-500' },
         { id: 'breakdown', label: '語音解碼', icon: <Search size={24} />, color: 'bg-pink-400 hover:bg-pink-500' },
         { id: 'phonetics', label: '聽辨分類', icon: <Headphones size={24} />, color: 'bg-purple-400 hover:bg-purple-500' },
+        { id: 'comprehension', label: '課文理解', icon: <HelpCircle size={24} />, color: 'bg-orange-400 hover:bg-orange-500' },
         { id: 'quiz', label: '綜合測驗', icon: <Gamepad2 size={24} />, color: 'bg-green-400 hover:bg-green-500' }
       ];
 
       return (
-        <div>
-          <header className="bg-white shadow-sm pt-8 pb-4 px-4 sticky top-0 z-50">
-            <div className="max-w-5xl mx-auto text-center">
-              <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-pink-500 to-yellow-500 mb-6 drop-shadow-sm">
-                🌟 拼音快樂學 🌟
-              </h1>
-              
-              <div className="flex flex-wrap justify-center gap-4">
-                {tabs.map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-6 py-4 rounded-2xl text-xl font-bold transition-all transform hover:scale-105 active:scale-95 shadow-md
-                      ${activeTab === tab.id ? `${tab.color} text-white ring-4 ring-opacity-50 ring-${tab.color.split('-')[1]}-300 translate-y-1` : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                  >
-                    {tab.icon}
-                    {tab.label}
-                  </button>
-                ))}
+        <div className="min-h-screen bg-slate-50 flex flex-col justify-between">
+          <div>
+            <header className="bg-white shadow-sm pt-8 pb-4 px-4 sticky top-0 z-50">
+              <div className="max-w-5xl mx-auto text-center">
+                <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-pink-500 via-purple-500 via-orange-500 to-green-500 mb-6 drop-shadow-sm">
+                  🌟 拼音快樂學 🌟
+                </h1>
+                
+                <div className="flex flex-wrap justify-center gap-4">
+                  {tabs.map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex items-center gap-2 px-6 py-4 rounded-2xl text-xl font-bold transition-all transform hover:scale-105 active:scale-95 shadow-md
+                        ${activeTab === tab.id ? `${tab.color} text-white ring-4 ring-opacity-50 ring-${tab.color.split('-')[1]}-300 translate-y-1` : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                    >
+                      {tab.icon}
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          </header>
+            </header>
 
-          <main className="max-w-6xl mx-auto p-6 md:p-10">
-            {activeTab === 'listen' && <ListenLearn />}
-            {activeTab === 'breakdown' && <PinyinBreakdown />}
-            {activeTab === 'phonetics' && <PhoneticsPractice />}
-            {activeTab === 'quiz' && <QuizTime />}
-          </main>
+            <main className="max-w-6xl mx-auto p-6 md:p-10">
+              {activeTab === 'listen' && <ListenLearn />}
+              {activeTab === 'breakdown' && <PinyinBreakdown />}
+              {activeTab === 'phonetics' && <PhoneticsPractice />}
+              {activeTab === 'comprehension' && <ComprehensionQuiz />}
+              {activeTab === 'quiz' && <QuizTime />}
+            </main>
+          </div>
+          
+          <footer className="bg-white py-4 text-center text-gray-400 text-sm font-semibold border-t">
+            🌈 讓學習拼音變得好玩又簡單！
+          </footer>
         </div>
       );
     }
