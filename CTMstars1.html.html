@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>明愛屯門馬登基金中學 - 「星探計劃」學生活動篩選與配對平台</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts Inter & Noto Sans TC -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f7ff',
+              100: '#e0effe',
+              500: '#2563eb',
+              600: '#1d4ed8',
+              700: '#1e40af',
+              800: '#1e3a8a',
+              900: '#172554',
+            },
+            accent: {
+              500: '#0d9488',
+              600: '#0f766e',
+            }
+          },
+          fontFamily: {
+            sans: ['"Noto Sans TC"', 'Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background-color: #f8fafc;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col custom-scrollbar">
+
+  <!-- Top Navigation Header -->
+  <header class="bg-gradient-to-r from-brand-900 via-brand-800 to-slate-900 text-white shadow-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="bg-white/10 p-2.5 rounded-xl backdrop-blur-sm border border-white/20">
+          <i class="fa-solid font-bold fa-star text-amber-400 text-2xl"></i>
+        </div>
+        <div>
+          <span class="text-xs font-medium tracking-wider text-amber-300 block">明愛屯門馬登基金中學 2026-27年度</span>
+          <h1 class="text-xl sm:text-2xl font-bold tracking-tight">「星探計劃」學生活動篩選與配對平台</h1>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        <button id="shortlist-btn" onclick="toggleShortlistModal()" class="relative inline-flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold px-4 py-2 rounded-xl transition duration-150 shadow-sm">
+          <i class="fa-solid fa-clipboard-list text-lg"></i>
+          <span>已選挑選清單</span>
+          <span id="shortlist-badge" class="ml-1 bg-slate-900 text-amber-400 text-xs font-bold px-2 py-0.5 rounded-full">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
+
+    <!-- Top Core Principles Banner -->
+    <div class="mb-6 bg-blue-50 border border-blue-200 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+      <div class="flex items-start space-x-3">
+        <div class="text-brand-600 mt-1">
+          <i class="fa-solid fa-circle-info text-xl"></i>
+        </div>
+        <div>
+          <h2 class="text-sm font-bold text-brand-900">核心元素指引 (2026-27年度)</h2>
+          <p class="text-xs text-slate-600 mt-1 leading-relaxed">
+            核心元素：<span class="font-semibold text-slate-800">敬</span> | 
+            公德組：<span class="font-semibold text-slate-800">正向態度教育</span> | 
+            聯課活動組：<span class="font-semibold text-slate-800">領袖訓練／解難</span> | 
+            訓輔組：<span class="font-semibold text-slate-800">欣賞國家</span> | 
+            其他：<span class="font-semibold text-slate-800">守法、紀律、服務學習</span>
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-2 self-end md:self-center shrink-0">
+        <span class="text-xs text-slate-500">總計劃數：<strong id="total-count-tag" class="text-brand-700 font-bold">38</strong> 個</span>
+      </div>
+    </div>
+
+    <!-- Filter Box Container -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 mb-8">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+        <h3 class="font-bold text-slate-800 flex items-center gap-2 text-base">
+          <i class="fa-solid fa-sliders text-brand-600"></i>
+          教師選拔與條件篩選工具
+        </h3>
+        <button onclick="resetFilters()" class="text-xs text-slate-500 hover:text-brand-600 transition flex items-center gap-1">
+          <i class="fa-solid fa-rotate-left"></i> 重設所有條件
+        </button>
+      </div>
+
+      <!-- Quick Preset Buttons -->
+      <div class="mb-5">
+        <label class="block text-xs font-semibold text-slate-500 mb-2">⚡ 常用情境快速篩選：</label>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="applyPreset('s1_discipline')" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 hover:bg-brand-50 hover:text-brand-700 border border-slate-200 transition">
+            🛡️ 中一新生紀律/訓練
+          </button>
+          <button onclick="applyPreset('non_chinese')" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 hover:bg-brand-50 hover:text-brand-700 border border-slate-200 transition">
+            🌍 非華語/少數族裔共融
+          </button>
+          <button onclick="applyPreset('mental_health')" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 hover:bg-brand-50 hover:text-brand-700 border border-slate-200 transition">
+            💚 精神健康與關懷
+          </button>
+          <button onclick="applyPreset('leaders')" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 hover:bg-brand-50 hover:text-brand-700 border border-slate-200 transition">
+            👑 學生會/社長/領袖生
+          </button>
+          <button onclick="applyPreset('adventure')" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 hover:bg-brand-50 hover:text-brand-700 border border-slate-200 transition">
+            🏕️ 戶外歷奇與挑戰
+          </button>
+          <button onclick="applyPreset('all_school')" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 hover:bg-brand-50 hover:text-brand-700 border border-slate-200 transition">
+            🏫 全校普及活動/講座
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
+        <!-- 1. Student Grade Filter -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1.5">1. 學生年級 (Grade)</label>
+          <div class="grid grid-cols-3 gap-1.5 bg-slate-50 p-2 rounded-xl border border-slate-200 text-xs">
+            <label class="flex items-center space-x-1 cursor-pointer">
+              <input type="checkbox" value="S1" class="grade-checkbox rounded text-brand-600 focus:ring-brand-500" onchange="filterData()">
+              <span>中一</span>
+            </label>
+            <label class="flex items-center space-x-1 cursor-pointer">
+              <input type="checkbox" value="S2" class="grade-checkbox rounded text-brand-600 focus:ring-brand-500" onchange="filterData()">
+              <span>中二</span>
+            </label>
+            <label class="flex items-center space-x-1 cursor-pointer">
+              <input type="checkbox" value="S3" class="grade-checkbox rounded text-brand-600 focus:ring-brand-500" onchange="filterData()">
+              <span>中三</span>
+            </label>
+            <label class="flex items-center space-x-1 cursor-pointer">
+              <input type="checkbox" value="S4" class="grade-checkbox rounded text-brand-600 focus:ring-brand-500" onchange="filterData()">
+              <span>中四</span>
+            </label>
+            <label class="flex items-center space-x-1 cursor-pointer">
+              <input type="checkbox" value="S5" class="grade-checkbox rounded text-brand-600 focus:ring-brand-500" onchange="filterData()">
+              <span>中五</span>
+            </label>
+            <label class="flex items-center space-x-1 cursor-pointer">
+              <input type="checkbox" value="S6" class="grade-checkbox rounded text-brand-600 focus:ring-brand-500" onchange="filterData()">
+              <span>中六</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 2. Gender Filter -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1.5">2. 學生性別 (Gender)</label>
+          <select id="gender-select" onchange="filterData()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+            <option value="ALL">男女均可 / 不限 (All)</option>
+            <option value="M">只限男生 (Male Only)</option>
+            <option value="F">只限女生 (Female Only)</option>
+          </select>
+        </div>
+
+        <!-- 3. Student Trait / Category Filter -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1.5">3. 適合學生特質/類別</label>
+          <select id="trait-select" onchange="filterData()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+            <option value="ALL">全部類別 (All Types)</option>
+            <option value="全體學生">全體學生 / 班級大眾</option>
+            <option value="選拔/推薦領袖">選拔/推薦幹事領袖</option>
+            <option value="非華語/少數族裔">非華語 / 少數族裔</option>
+            <option value="戶外/歷奇挑戰">戶外 / 歷奇挑戰型</option>
+            <option value="紀律/制服團隊">紀律 / 制服團隊</option>
+            <option value="心靈/精神健康">精神健康 / 心靈關懷</option>
+            <option value="自信表達/公開演講">自信表達 / 演講磨練</option>
+          </select>
+        </div>
+
+        <!-- 4. Training Goal Filter -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1.5">4. 培訓目標 (Goal)</label>
+          <select id="goal-select" onchange="filterData()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+            <option value="ALL">全部目標 (All Goals)</option>
+            <option value="領袖訓練">領袖訓練 (Leadership)</option>
+            <option value="紀律訓練">紀律訓練 (Discipline)</option>
+            <option value="服務學習">服務學習 (Service)</option>
+            <option value="正向態度教育">正向態度教育 (Positive Ed)</option>
+            <option value="欣賞國家">欣賞國家 / 國民教育</option>
+            <option value="解難">解難 / 團隊合作</option>
+            <option value="精神健康訓練">精神健康訓練</option>
+          </select>
+        </div>
+
+      </div>
+
+      <!-- Second Row Filters: Department & Keyword Search -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-100">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1.5">5. 負責組別 (Department)</label>
+          <select id="dept-select" onchange="filterData()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+            <option value="ALL">全部組別 (All Departments)</option>
+            <option value="訓輔組">訓輔組</option>
+            <option value="聯課活動組">聯課活動組</option>
+            <option value="生涯規劃">生涯規劃組</option>
+            <option value="公德組">公德組 / 公教及德育組 / 中史科</option>
+            <option value="圖書館">圖書館</option>
+            <option value="社區聯絡及推廣組">社區聯絡及推廣組</option>
+          </select>
+        </div>
+
+        <div class="md:col-span-2">
+          <label class="block text-xs font-bold text-slate-700 mb-1.5">6. 關鍵字搜尋 (Keyword Search)</label>
+          <div class="relative">
+            <input type="text" id="keyword-input" onkeyup="filterData()" placeholder="輸入活動名稱、內容、目的等關鍵字 (如：步操, 賽馬會, 演講, 歷奇)..." class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Results Header and View Toggles -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+      <div class="flex items-center space-x-2">
+        <h3 class="text-base font-bold text-slate-800">搜尋結果</h3>
+        <span id="result-count-badge" class="bg-brand-100 text-brand-800 text-xs font-bold px-2.5 py-0.5 rounded-full">
+          符合項目：38 個
+        </span>
+      </div>
+
+      <div class="flex items-center space-x-3 self-end sm:self-auto">
+        <!-- Sort Select -->
+        <select id="sort-select" onchange="filterData()" class="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs focus:outline-none">
+          <option value="default">預設排序</option>
+          <option value="dept">按負責組別</option>
+          <option value="time">按推行時間</option>
+          <option value="name">按活動名稱</option>
+        </select>
+
+        <!-- View Switcher -->
+        <div class="bg-slate-200 p-0.5 rounded-xl flex items-center">
+          <button id="btn-view-card" onclick="switchView('card')" class="px-3 py-1 rounded-lg text-xs font-medium bg-white text-slate-800 shadow-sm transition">
+            <i class="fa-solid fa-border-all mr-1"></i> 卡片
+          </button>
+          <button id="btn-view-table" onclick="switchView('table')" class="px-3 py-1 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition">
+            <i class="fa-solid fa-list mr-1"></i> 表格
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card Container -->
+    <div id="card-view-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <!-- Dynamic JS Content Injected Here -->
+    </div>
+
+    <!-- Table Container (Hidden by default) -->
+    <div id="table-view-container" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="overflow-x-auto custom-scrollbar">
+        <table class="w-full text-xs text-left text-slate-700">
+          <thead class="text-xs uppercase bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+            <tr>
+              <th class="px-4 py-3">負責組別</th>
+              <th class="px-4 py-3">訓練項目</th>
+              <th class="px-4 py-3">對象學生</th>
+              <th class="px-2 py-3 text-center">中一</th>
+              <th class="px-2 py-3 text-center">中二</th>
+              <th class="px-2 py-3 text-center">中三</th>
+              <th class="px-2 py-3 text-center">中四</th>
+              <th class="px-2 py-3 text-center">中五</th>
+              <th class="px-2 py-3 text-center">中六</th>
+              <th class="px-4 py-3">推行時間</th>
+              <th class="px-4 py-3">培訓目標</th>
+              <th class="px-4 py-3 text-center">操作</th>
+            </tr>
+          </thead>
+          <tbody id="table-body" class="divide-y divide-slate-100">
+            <!-- Dynamic JS Content Injected Here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty-state" class="hidden text-center py-12 bg-white rounded-2xl border border-slate-200 shadow-sm my-6">
+      <div class="w-16 h-16 mx-auto bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mb-3 text-2xl">
+        <i class="fa-solid fa-folder-open"></i>
+      </div>
+      <h4 class="text-slate-700 font-bold text-base mb-1">找不到符合條件的計劃</h4>
+      <p class="text-xs text-slate-500 mb-4">請嘗試取消部分篩選條件或重新搜尋</p>
+      <button onclick="resetFilters()" class="inline-flex items-center space-x-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-4 py-2 rounded-xl transition">
+        <i class="fa-solid fa-rotate-left"></i>
+        <span>重設篩選條件</span>
+      </button>
+    </div>
+
+  </main>
+
+  <!-- Activity Detail Modal -->
+  <div id="detail-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full overflow-hidden border border-slate-100 max-h-[90vh] flex flex-col">
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-brand-800 to-brand-900 text-white p-5 flex items-start justify-between relative">
+        <div>
+          <span id="modal-dept-badge" class="inline-block bg-white/20 text-amber-300 text-[11px] font-semibold px-2.5 py-0.5 rounded-full mb-1">
+            訓輔組
+          </span>
+          <h2 id="modal-title" class="text-xl font-bold">活動名稱</h2>
+          <p id="modal-time-subtitle" class="text-xs text-slate-300 mt-1">推行時間：全年</p>
+        </div>
+        <button onclick="closeModal()" class="text-slate-300 hover:text-white bg-white/10 p-2 rounded-xl hover:bg-white/20 transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 overflow-y-auto custom-scrollbar space-y-5 text-sm">
+        
+        <!-- Grades & Target -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+          <div>
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">對象與人數</span>
+            <p id="modal-target" class="font-semibold text-slate-800">中二至中五獲選學生(約30人)</p>
+          </div>
+          <div>
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">適用年級</span>
+            <div id="modal-grades" class="flex flex-wrap gap-1"></div>
+          </div>
+        </div>
+
+        <!-- Goals -->
+        <div>
+          <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1.5">培訓目標 Focus Goals</span>
+          <div id="modal-goals" class="flex flex-wrap gap-1.5"></div>
+        </div>
+
+        <!-- Purpose -->
+        <div>
+          <span class="text-xs font-bold text-slate-700 block mb-1 flex items-center gap-1.5">
+            <i class="fa-solid fa-bullseye text-brand-600"></i>
+            訓練／活動目的 (Objective)
+          </span>
+          <p id="modal-purpose" class="text-slate-600 text-xs leading-relaxed bg-amber-50/60 p-3 rounded-xl border border-amber-200/60">
+            -
+          </p>
+        </div>
+
+        <!-- Content -->
+        <div>
+          <span class="text-xs font-bold text-slate-700 block mb-1 flex items-center gap-1.5">
+            <i class="fa-solid fa-clipboard-check text-accent-600"></i>
+            訓練／活動內容 (Activity Content)
+          </span>
+          <p id="modal-content" class="text-slate-600 text-xs leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200">
+            -
+          </p>
+        </div>
+
+        <!-- Traits -->
+        <div>
+          <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">建議挑選學生類型</span>
+          <div id="modal-traits" class="flex flex-wrap gap-1"></div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+        <button id="modal-shortlist-btn" onclick="toggleCurrentShortlist()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-1.5">
+          <i class="fa-solid fa-plus"></i>
+          <span>加入挑選清單</span>
+        </button>
+        <button onclick="closeModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold px-4 py-2.5 rounded-xl transition">
+          關閉窗口
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Shortlist Drawer / Modal -->
+  <div id="shortlist-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-3xl w-full overflow-hidden border border-slate-100 max-h-[90vh] flex flex-col">
+      <!-- Header -->
+      <div class="bg-slate-900 text-white p-5 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-clipboard-list text-amber-400 text-xl"></i>
+          <div>
+            <h3 class="font-bold text-lg">教師挑選計劃清單 (Teacher's Shortlist)</h3>
+            <p class="text-xs text-slate-400">已挑選可供學生參與的計劃項目</p>
+          </div>
+        </div>
+        <button onclick="toggleShortlistModal()" class="text-slate-400 hover:text-white p-2">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Content -->
+      <div class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-4">
+        <div id="shortlist-empty" class="text-center py-8 text-slate-400 text-xs">
+          尚未加入任何計劃。點擊卡片上的「➕ 挑選」按鈕即可加入此清單。
+        </div>
+
+        <div id="shortlist-items-list" class="space-y-3">
+          <!-- Dynamic Items -->
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
+        <button onclick="clearShortlist()" class="text-xs text-rose-600 hover:underline font-medium">
+          <i class="fa-solid fa-trash-can mr-1"></i> 清空清單
+        </button>
+        <div class="flex items-center space-x-2">
+          <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold px-4 py-2 rounded-xl transition">
+            <i class="fa-solid fa-print mr-1"></i> 列印清單
+          </button>
+          <button onclick="toggleShortlistModal()" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-4 py-2 rounded-xl transition">
+            完成挑選
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* Complete 38 Activity Data Set Extracted from 訓輔組「星探計劃」.xlsx */
+    const activitiesData = [
+      {
+        id: 1,
+        dept: "訓輔組",
+        title: "領袖生",
+        target: "中二至中五獲選學生(約30人)",
+        grades: ["S2", "S3", "S4", "S5"],
+        gender: "ALL",
+        time: "全年",
+        purpose: "於指定活動作為校方代表及與校方協力樹立優良校風為己任。",
+        content: "協助老師維持學校的秩序、協助老師勸喻和提醒同學遵守校規、防止頑劣學生在校內進行違規活動",
+        goals: ["領袖訓練", "服務學習"],
+        traits: ["選拔/推薦領袖", "紀律/制服團隊"]
+      },
+      {
+        id: 2,
+        dept: "訓輔組",
+        title: "女童軍",
+        target: "只限中一非華語女生(約20人)",
+        grades: ["S1"],
+        gender: "F",
+        time: "全年",
+        purpose: "為女孩子提供不同的興趣訓練和活動，透過多元化的活動，女童軍可以提升知識技能和品格，建立自信，從而成為一個出類拔萃的今日新女性。",
+        content: "常規集會、步操、升旗、宣誓及各項對外活動。",
+        goals: ["欣賞國家", "紀律訓練"],
+        traits: ["非華語/少數族裔", "紀律/制服團隊"]
+      },
+      {
+        id: 3,
+        dept: "訓輔組",
+        title: "青少年軍",
+        target: "只限中一男生(約20人)",
+        grades: ["S1"],
+        gender: "M",
+        time: "全年",
+        purpose: "激勵青少年自我學習和啟發，培訓他們成為一個愛護國家,有自立能力、樂於助人、有責任感及勇於承擔的人。",
+        content: "常規集會、步操、升旗、宣誓及各項對外活動。",
+        goals: ["欣賞國家", "紀律訓練"],
+        traits: ["紀律/制服團隊"]
+      },
+      {
+        id: 4,
+        dept: "訓輔組",
+        title: "童軍",
+        target: "中一學生(約20人)",
+        grades: ["S1"],
+        gender: "ALL",
+        time: "全年",
+        purpose: "採用獨特的童軍訓練方法，激勵青少年自我學習和啟發，培訓他們成為一個有自立能力、樂於助人、有責任感及勇於承擔的人。",
+        content: "常規集會、步操、升旗、大會操及參觀活動",
+        goals: ["欣賞國家", "紀律訓練"],
+        traits: ["紀律/制服團隊"]
+      },
+      {
+        id: 5,
+        dept: "訓輔組",
+        title: "領袖訓練學院",
+        target: "中四至中五獲選學生（20人）",
+        grades: ["S4", "S5"],
+        gender: "ALL",
+        time: "全年",
+        purpose: "接受一系列的校本及聯校培訓，透過互動的工作坊認識保持精神健康的方法、常見的精神病和關心朋輩的實用技巧等，培訓亦特別強調青少年在遇到困難時向可信任的成人求助的重要性。",
+        content: "校本及聯校培訓以及舉辦至少一次精神健康及共融活動。",
+        goals: ["精神健康訓練", "服務學習"],
+        traits: ["心靈/精神健康", "選拔/推薦領袖"]
+      },
+      {
+        id: 6,
+        dept: "訓輔組",
+        deptFull: "訓輔組 / 聯課活動組／公德組",
+        title: "明愛賣物會/家長日／畢業禮／陸運會",
+        target: "中一制服團隊學生(約20人)",
+        grades: ["S1"],
+        gender: "ALL",
+        time: "全年指定活動日",
+        purpose: "透過提供當值服務，讓學生明白到大型服務的人群管理及秩序安排。並從而了解服務學習的重要性。",
+        content: "聽取服務簡介，並分批當值",
+        goals: ["服務學習", "紀律訓練"],
+        traits: ["紀律/制服團隊"]
+      },
+      {
+        id: 7,
+        dept: "訓輔組",
+        title: "中一團隊訓練日營",
+        target: "中一全體學生",
+        grades: ["S1", "S2"],
+        gender: "ALL",
+        time: "2026-10-09",
+        purpose: "提供紀律訓練，教授中式步操，讓學生從訓練中培養堅強意志，學習自律自省、團結和刻苦精神。",
+        content: "包括中式步操、升旗訓練、軍體拳、以及教授若干國情知識，這些訓練都能對學生在未來於香港及中國立足和發展有莫大裨益。",
+        goals: ["紀律訓練"],
+        traits: ["全體學生", "紀律/制服團隊"]
+      },
+      {
+        id: 8,
+        dept: "訓輔組",
+        title: "外展訓練",
+        target: "中三至中四獲選學生（8人）",
+        grades: ["S3", "S4"],
+        gender: "ALL",
+        time: "23/12/2025-31/12/2025",
+        purpose: "從高成效的戶外體驗式學習體驗，裝備學生未來技能和身心健康，鼓勵社會共融，助他們茁護成長。",
+        content: "劃艇、遠足、帆船、攀岩或高空繩索活動",
+        goals: ["紀律訓練", "領袖訓練", "解難"],
+        traits: ["戶外/歷奇挑戰", "選拔/推薦領袖"]
+      },
+      {
+        id: 9,
+        dept: "公德組",
+        deptFull: "公德組及中史科",
+        title: "《憲法》和《基本法》學生校園大使",
+        target: "20人 (中一至中五中挑選)",
+        grades: ["S1", "S2", "S3", "S4", "S5"],
+        gender: "ALL",
+        time: "全年",
+        purpose: "為學生提供全方位學習及培訓，發展他們的領袖才能，成為德才兼備、有承擔、具備國家觀念及愛國愛家的良好公民，將來回饋社會、貢獻國家。受訓的學生成為領袖，協助教師推動校本《憲法》和《基本法》活動，加強學校推廣國民教育的學習氛圍。",
+        content: "領袖培訓工作坊、升國旗儀式工作坊、國情電影欣賞會、專題講座、教育參觀及學習團等",
+        goals: ["欣賞國家", "正向態度教育"],
+        traits: ["選拔/推薦領袖"]
+      },
+      {
+        id: 10,
+        dept: "圖書館",
+        title: "圖書館領袖生",
+        target: "全校獲選學生(40-50人)",
+        grades: ["S1", "S2", "S3", "S4", "S5", "S6"],
+        gender: "ALL",
+        time: "全年",
+        purpose: "培訓學生圖書館服務技能，協助推廣閱讀，從合作活動及團隊訓練提升他們的自信心及責任感。讓學生在不同領域發心所長，從服務中培養良好的態度。",
+        content: "小組活動訓練，以團體訓練活動協助學生認識互相合作的重要性。",
+        goals: ["服務學習"],
+        traits: ["選拔/推薦領袖"]
+      },
+      {
+        id: 11,
+        dept: "聯課活動組",
+        title: "四社社長及社幹事",
+        target: "中三至中五(約20人)",
+        grades: ["S3", "S4", "S5"],
+        gender: "ALL",
+        time: "全年",
+        purpose: "促進各級學生交流，學習融洽共處，在不同領域發揮團隊合作精神，加强低年級學生對學校及社的歸屬感。",
+        content: "協辦社際活動，並帶領社的同學進行社際比賽。",
+        goals: ["領袖訓練", "解難"],
+        traits: ["選拔/推薦領袖"]
+      },
+      {
+        id: 12,
+        dept: "聯課活動組",
+        title: "學生會 (幹事陣容)",
+        target: "中二至中五(約20人)",
+        grades: ["S2", "S3", "S4", "S5"],
+        gender: "ALL",
+        time: "全年",
+        purpose: "以學校的辦學宗旨和信念為原則，為學生提供多元發展的平台；作為學生與學校之間的橋樑，以加強學生對學校的歸屬感；作為學生與社區之間的橋樑，引入校外資源，豐富同學的學習經歷。",
+        content: "協辦學校各項校內活動，反映學生意見，代表學校進行校外服務。",
+        goals: ["領袖訓練", "解難"],
+        traits: ["選拔/推薦領袖"]
+      },
+      {
+        id: 13,
+        dept: "生涯規劃",
+        title: "全球網路安全日講座",
+        target: "中一全體",
+        grades: ["S1"],
+        gender: "ALL",
+        time: "03/2026",
+        purpose: "學生透過對世界議題及挑戰的認識，提升危機處理技巧，磨練溝通協調能力。",
+        content: "學生透過對世界議題及挑戰的認識，提升危機處理技巧，磨練溝通協調能力。",
+        goals: ["解難"],
+        traits: ["全體學生"]
+      },
+      {
+        id: 14,
+        dept: "生涯規劃",
+        title: "The Art of Public Speaking 公開演講之道",
+        target: "中二全體",
+        grades: ["S2"],
+        gender: "ALL",
+        time: "待定",
+        purpose: "訓練學生自信地表達自己想法和願景,清晰地組織演內容,並有效地與聽眾互動，學生多項與領袖素質訓練及升有密切相關的能力。",
+        content: "訓練學生自信地表達自己想法和願景,清晰地組織演內容,並有效地與聽眾互動。",
+        goals: ["領袖訓練"],
+        traits: ["全體學生", "自信表達/公開演講"]
+      },
+      {
+        id: 15,
+        dept: "生涯規劃",
+        title: "專業運動行業-從業員分享講座",
+        target: "中四全體",
+        grades: ["S4"],
+        gender: "ALL",
+        time: "04/2026",
+        purpose: "從嘉賓分享到總結培養領袖素質。",
+        content: "從嘉賓分享到總結培養領袖素質。",
+        goals: ["領袖訓練"],
+        traits: ["全體學生"]
+      },
+      {
+        id: 16,
+        dept: "生涯規劃",
+        title: "正向思維講座",
+        target: "中五全體",
+        grades: ["S5"],
+        gender: "ALL",
+        time: "04/2026",
+        purpose: "從總結個人生涯目標，到善用環境及建立人脈資源去達到人生目標。",
+        content: "從總結個人生涯目標，到善用環境及建立人脈資源去達到人生目標。",
+        goals: ["正向態度教育"],
+        traits: ["全體學生", "心靈/精神健康"]
+      },
+      {
+        id: 17,
+        dept: "生涯規劃",
+        title: "面試技巧工作坊",
+        target: "中六全體",
+        grades: ["S6"],
+        gender: "ALL",
+        time: "05/2026",
+        purpose: "藉著不同大學課程要求舉隅及分析，提高他們在面試中的表現，並訓練學生如何按情況個計劃及準備日後不同面試。",
+        content: "藉著不同大學課程要求舉隅及分析，提高他們在面試中的表現，並訓練學生如何按情況個計劃及準備日後不同面試。",
+        goals: ["正向態度教育"],
+        traits: ["全體學生", "自信表達/公開演講"]
+      },
+      {
+        id: 18,
+        dept: "生涯規劃",
+        title: "粵港澳大灣區青年領袖分享周會講座",
+        target: "全校",
+        grades: ["S1", "S2", "S3", "S4", "S5", "S6"],
+        gender: "ALL",
+        time: "03/2026",
+        purpose: "從嘉賓分享到總結成為社會領袖，貢獻國家及社會等的成長歷程及如何培養成為領袖的個人素質等經驗。",
+        content: "從嘉賓分享到總結成為社會領袖，貢獻國家及社會等的成長歷程及如何培養成為領袖的個人素質等經驗。",
+        goals: ["欣賞國家", "正向態度教育"],
+        traits: ["全體學生"]
+      },
+      {
+        id: 19,
+        dept: "訓輔組",
+        title: "《PROJECT J 3.0》其他族裔學生獎勵計劃",
+        target: "中四獲選學生（8人）",
+        grades: ["S4"],
+        gender: "ALL",
+        time: "全年",
+        purpose: "計劃以凝聚其他族裔青少年為目標，推行以獎勵計劃為本的多元化體驗活動，從而宣揚「愛護家國、奉公守法、遠離毒品、支持更生」四大信息，以新興運動讓參加者建立個人自信和培養團體合作精神，以及將學到的技巧和內容學以致用，以義工服務方式回饋社會，以達致關愛共融。",
+        content: "以新興運動讓參加者建立個人自信和培養團體合作精神，以義工服務方式回饋社會。",
+        goals: ["欣賞國家", "紀律訓練", "服務學習"],
+        traits: ["非華語/少數族裔", "選拔/推薦領袖"]
+      },
+      {
+        id: 20,
+        dept: "訓輔組",
+        title: "班領導崗位",
+        target: "全校各班遴選學生",
+        grades: ["S1", "S2", "S3", "S4", "S5", "S6"],
+        gender: "ALL",
+        time: "全年",
+        purpose: "賦予學生不同班領袖的崗位，並定期檢討職能成效。以義工服務方式回饋社會，以達致關愛共融。",
+        content: "賦予學生不同班領袖的崗位，並定期檢討職能成效。",
+        goals: ["領袖訓練"],
+        traits: ["全體學生", "選拔/推薦領袖"]
+      },
+      {
+        id: 21,
+        dept: "訓輔組",
+        title: "賽馬會平行心間身心健康大使",
+        target: "部分獲選學生",
+        grades: ["S2", "S4"],
+        gender: "ALL",
+        time: "全年",
+        purpose: "為學生提供「身心健康自我管理課程」，共建健康關愛校園及社區，為青少年精神健康服務，讓青少年得到貼心及適時的協助。",
+        content: "領袖培訓工作坊、專題講座",
+        goals: ["領袖訓練", "正向態度教育"],
+        traits: ["心靈/精神健康", "選拔/推薦領袖"]
+      },
+      {
+        id: 22,
+        dept: "訓輔組",
+        title: "賽馬會平行心間學會創會會員",
+        target: "中四級獲選學生",
+        grades: ["S4"],
+        gender: "ALL",
+        time: "全年",
+        purpose: "為學生提供「身心健康自我管理課程」，共建健康關愛校園及社區，為青少年精神健康服務，讓青少年得到貼心及適時的協助。",
+        content: "領袖培訓工作坊、專題講座",
+        goals: ["領袖訓練", "正向態度教育"],
+        traits: ["心靈/精神健康", "選拔/推薦領袖"]
+      },
+      {
+        id: 23,
+        dept: "聯課活動組",
+        title: "屯馬盃 - 五人六足",
+        target: "部分獲選學生(學生會)",
+        grades: ["S2", "S3", "S4", "S5"],
+        gender: "ALL",
+        time: "11/2025",
+        purpose: "賦予學生於組內擔任領袖的崗位，訓練其團隊精神、領導才能及溝通能力。",
+        content: "於組內帶領組員參與活動，協調、籌備整個活動。",
+        goals: ["領袖訓練", "解難"],
+        traits: ["選拔/推薦領袖"]
+      },
+      {
+        id: 24,
+        dept: "聯課活動組",
+        title: "屯馬英語觀星夜領袖培訓活動",
+        target: "部分獲選學生(學生會)",
+        grades: ["S2", "S3", "S4", "S5"],
+        gender: "ALL",
+        time: "2024-11-21",
+        purpose: "賦予學生於組內擔任領袖的崗位，訓練其團隊精神、領導才能及溝通能力。",
+        content: "於組內帶領組員參與活動，協調、籌備整個活動。",
+        goals: ["領袖訓練", "解難"],
+        traits: ["選拔/推薦領袖"]
+      },
+      {
+        id: 25,
+        dept: "聯課活動組",
+        title: "屯馬英語觀星夜",
+        target: "部分獲選學生(學生會)",
+        grades: ["S2", "S3", "S4", "S5"],
+        gender: "ALL",
+        time: "2024-11-22",
+        purpose: "賦予學生於組內擔任領袖的崗位，訓練其團隊精神、領導才能及溝通能力。",
+        content: "於組內帶領組員參與活動，協調、籌備整個活動。",
+        goals: ["領袖訓練", "解難"],
+        traits: ["選拔/推薦領袖"]
+      },
+      {
+        id: 26,
+        dept: "聯課活動組",
+        title: "聖誕聯歡會 (籌備幹事)",
+        target: "部分獲選學生(學生會)",
+        grades: ["S2", "S3", "S4", "S5"],
+        gender: "ALL",
+        time: "2025-12-19",
+        purpose: "賦予學生於組內擔任領袖的崗位，訓練其團隊精神、領導才能及溝通能力。",
+        content: "於組內帶領組員參與活動，協調、籌備整個活動。",
+        goals: ["領袖訓練", "解難"],
+        traits: ["選拔/推薦領袖"]
+      },
+      {
+        id: 27,
+        dept: "社區聯絡及推廣組",
+        deptFull: "社區聯絡及推廣組、聯課活動組",
+        title: "仁德小學種族共融推廣活動",
+        target: "部分獲選學生(學生會)",
+        grades: ["S3"],
+        gender: "ALL",
+        time: "全年",
+        purpose: "賦予學生代表學校向校外小學推廣本校，訓練其領導才能及溝通能力。",
+        content: "於組內帶領組員參與活動，協調、籌備整個活動。",
+        goals: ["領袖訓練", "解難"],
+        traits: ["非華語/少數族裔", "選拔/推薦領袖"]
+      },
+      {
+        id: 28,
+        dept: "公德組",
+        deptFull: "公教及德育組",
+        title: "逆境訓練日營",
+        target: "中一至中五(約40人)",
+        grades: ["S1", "S2", "S3", "S4", "S5"],
+        gender: "ALL",
+        time: "2025-01-18",
+        purpose: "以正向心理學元素協助學生發掘內在信念及建立正向思維，培養學生的心理韌性，提升學生的幸福感及面對逆境的能力。",
+        content: "歷奇活動",
+        goals: ["正向態度教育"],
+        traits: ["戶外/歷奇挑戰", "心靈/精神健康"]
+      },
+      {
+        id: 29,
+        dept: "聯課活動組",
+        title: "學生會 (團隊幹事服務)",
+        target: "部分當選學生",
+        grades: ["S2", "S3", "S4", "S5"],
+        gender: "ALL",
+        time: "全年",
+        purpose: "培養學生領袖，增強其活動管理、宣傳、溝通、協調等能力，並幫助籌備校內活動，以提升對學生的歸屬感、凝聚力。",
+        content: "籌備各類活動",
+        goals: ["領袖訓練"],
+        traits: ["選拔/推薦領袖"]
+      },
+      {
+        id: 30,
+        dept: "訓輔組",
+        title: "SOS學界精神健康資助計劃",
+        target: "部分獲選學生",
+        grades: ["S4", "S5"],
+        gender: "ALL",
+        time: "03/2026",
+        purpose: "增加學生對精神健康的知識，為學生提供軟技能訓練和應用學習體驗；設計活動予校內同學及社區；有機會與其他院校的同學交流。",
+        content: "工作坊、活動籌劃",
+        goals: ["領袖訓練", "正向態度教育"],
+        traits: ["心靈/精神健康", "選拔/推薦領袖"]
+      },
+      {
+        id: 31,
+        dept: "訓輔組",
+        title: "學生領袖訓練營",
+        target: "中四、五級獲選學生",
+        grades: ["S4", "S5"],
+        gender: "ALL",
+        time: "04/09/2026-05/09/2026",
+        purpose: "提供高成效的戶外體驗式學習體驗，裝備學生未來技能和身心健康，鼓勵社會共融，助他們茁壯成長。",
+        content: "歷奇活動",
+        goals: ["領袖訓練", "正向態度教育"],
+        traits: ["戶外/歷奇挑戰", "選拔/推薦領袖"]
+      },
+      {
+        id: 32,
+        dept: "公德組",
+        deptFull: "公教及德育組",
+        title: "香港青年獎勵計劃(銀章級)野外鍛鍊科課程",
+        target: "中三、四、五獲選學生",
+        grades: ["S3", "S4", "S5"],
+        gender: "ALL",
+        time: "2025/03/30 - 2025/05/16",
+        purpose: "為提升學生的自律、團隊合作精神及野外生存技能，培養學生領袖。",
+        content: "歷奇活動",
+        goals: ["領袖訓練", "解難"],
+        traits: ["戶外/歷奇挑戰", "選拔/推薦領袖"]
+      },
+      {
+        id: 33,
+        dept: "訓輔組",
+        deptFull: "訓輔組/聯課活動組／宣傳及推廣組",
+        title: "多元文化市集",
+        target: "領袖訓練學院學生",
+        grades: ["S1", "S2", "S3", "S4", "S5"],
+        gender: "ALL",
+        time: "2026-04-24",
+        purpose: "培養學生領袖，增強其活動管理、宣傳、溝通、協調等能力，並幫助籌備校內活動，以提升對學生的歸屬感、凝聚力。",
+        content: "活動籌劃",
+        goals: ["領袖訓練", "正向態度教育"],
+        traits: ["非華語/少數族裔", "選拔/推薦領袖"]
+      },
+      {
+        id: 34,
+        dept: "訓輔組",
+        title: "精神健康及共融活動／工作坊",
+        target: "中二至中五獲選學生(約30人)",
+        grades: ["S2", "S3", "S4", "S5"],
+        gender: "ALL",
+        time: "待定/全年",
+        purpose: "旨在提升學生對心理健康的認識，通過活動、互動工作坊和藝術治療，促進校內包容和支持氣氛。",
+        content: "活動／工作坊",
+        goals: ["正向態度教育"],
+        traits: ["心靈/精神健康"]
+      },
+      {
+        id: 35,
+        dept: "訓輔組",
+        title: "「無煙無毒無上癮」校園展覽",
+        target: "全校",
+        grades: ["S1", "S2", "S3", "S4", "S5", "S6"],
+        gender: "ALL",
+        time: "十二月",
+        purpose: "在校內舉辦資訊展覽、互動攤位、身體檢查、諮詢評估等活動，提供整全的禁煙、抗毒資訊。對象為全校師生。",
+        content: "校園展覽",
+        goals: ["正向態度教育"],
+        traits: ["全體學生"]
+      },
+      {
+        id: 36,
+        dept: "訓輔組",
+        title: "吸毒及煙酒禍害班級互動課",
+        target: "中二至中五獲選學生(約10人)",
+        grades: ["S2", "S3", "S4", "S5"],
+        gender: "ALL",
+        time: "待定/全年",
+        purpose: "以互動課形式與學生討論毒品及煙酒禍害問題。對象為初中學生。",
+        content: "班級互動課",
+        goals: ["正向態度教育"],
+        traits: ["全體學生"]
+      },
+      {
+        id: 37,
+        dept: "訓輔組",
+        title: "參觀香港賽馬會禁毒資訊天地及延伸活動",
+        target: "中一全體學生",
+        grades: ["S1"],
+        gender: "ALL",
+        time: "待定",
+        purpose: "參觀香港賽馬會禁毒資訊天地，透過互動展覽和相關教育活動，如問答比賽和工作坊, 提升學生對禁毒的認識，鼓勵健康生活方式，並推動社會共融與支持。",
+        content: "參觀活動",
+        goals: ["正向態度教育"],
+        traits: ["全體學生"]
+      },
+      {
+        id: 38,
+        dept: "訓輔組",
+        title: "禁毒動畫、短片及微電影分享",
+        target: "全校",
+        grades: ["S1", "S2", "S3", "S4", "S5", "S6"],
+        gender: "ALL",
+        time: "六月",
+        purpose: "透過在校內播放感動動畫、短片及微電影，傳遞更多禁毒訊息。",
+        content: "禁毒電影欣賞",
+        goals: ["正向態度教育"],
+        traits: ["全體學生"]
+      }
+    ];
+
+    // Global App State
+    let currentFiltered = [...activitiesData];
+    let currentViewMode = 'card'; // 'card' or 'table'
+    let shortlist = []; // Array of activity IDs
+    let currentSelectedId = null;
+
+    window.onload = function() {
+      renderCountTotal();
+      filterData();
+    };
+
+    function renderCountTotal() {
+      document.getElementById('total-count-tag').innerText = activitiesData.length;
+    }
+
+    // Filter Trigger Engine
+    function filterData() {
+      // Selected Grades
+      const gradeCheckboxes = document.querySelectorAll('.grade-checkbox:checked');
+      const selectedGrades = Array.from(gradeCheckboxes).map(cb => cb.value);
+
+      // Selected Gender
+      const selectedGender = document.getElementById('gender-select').value;
+
+      // Selected Trait
+      const selectedTrait = document.getElementById('trait-select').value;
+
+      // Selected Goal
+      const selectedGoal = document.getElementById('goal-select').value;
+
+      // Selected Dept
+      const selectedDept = document.getElementById('dept-select').value;
+
+      // Search Keyword
+      const keyword = document.getElementById('keyword-input').value.trim().toLowerCase();
+
+      // Sort Choice
+      const sortChoice = document.getElementById('sort-select').value;
+
+      currentFiltered = activitiesData.filter(item => {
+        // 1. Grade match (if any checked, must include at least one selected grade)
+        if (selectedGrades.length > 0) {
+          const hasGrade = selectedGrades.some(g => item.grades.includes(g));
+          if (!hasGrade) return false;
+        }
+
+        // 2. Gender match
+        if (selectedGender !== 'ALL') {
+          if (item.gender !== 'ALL' && item.gender !== selectedGender) {
+            return false;
+          }
+        }
+
+        // 3. Trait match
+        if (selectedTrait !== 'ALL') {
+          if (!item.traits.includes(selectedTrait)) {
+            return false;
+          }
+        }
+
+        // 4. Goal match
+        if (selectedGoal !== 'ALL') {
+          if (!item.goals.includes(selectedGoal)) {
+            return false;
+          }
+        }
+
+        // 5. Dept match
+        if (selectedDept !== 'ALL') {
+          const deptText = item.deptFull || item.dept;
+          if (!deptText.includes(selectedDept)) {
+            return false;
+          }
+        }
+
+        // 6. Keyword Search
+        if (keyword) {
+          const textToSearch = `${item.title} ${item.target} ${item.purpose} ${item.content} ${item.dept} ${item.goals.join(' ')} ${item.traits.join(' ')}`.toLowerCase();
+          if (!textToSearch.includes(keyword)) {
+            return false;
+          }
+        }
+
+        return true;
+      });
+
+      // Sorting logic
+      if (sortChoice === 'dept') {
+        currentFiltered.sort((a, b) => a.dept.localeCompare(b.dept, 'zh-HK'));
+      } else if (sortChoice === 'time') {
+        currentFiltered.sort((a, b) => a.time.localeCompare(b.time, 'zh-HK'));
+      } else if (sortChoice === 'name') {
+        currentFiltered.sort((a, b) => a.title.localeCompare(b.title, 'zh-HK'));
+      }
+
+      // Update Result Counter
+      document.getElementById('result-count-badge').innerText = `符合項目：${currentFiltered.length} 個`;
+
+      // Render Active View
+      renderCurrentView();
+    }
+
+    function renderCurrentView() {
+      const cardContainer = document.getElementById('card-view-container');
+      const tableContainer = document.getElementById('table-view-container');
+      const emptyState = document.getElementById('empty-state');
+
+      if (currentFiltered.length === 0) {
+        cardContainer.classList.add('hidden');
+        tableContainer.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+
+      if (currentViewMode === 'card') {
+        tableContainer.classList.add('hidden');
+        cardContainer.classList.remove('hidden');
+        renderCards();
+      } else {
+        cardContainer.classList.add('hidden');
+        tableContainer.classList.remove('hidden');
+        renderTable();
+      }
+    }
+
+    function renderCards() {
+      const container = document.getElementById('card-view-container');
+      container.innerHTML = '';
+
+      currentFiltered.forEach(item => {
+        const isShortlisted = shortlist.includes(item.id);
+
+        // Grade Pills HTML
+        const gradesHTML = item.grades.map(g => {
+          return `<span class="bg-slate-100 text-slate-700 font-semibold text-[10px] px-1.5 py-0.5 rounded border border-slate-200">${g.replace('S', '中')}</span>`;
+        }).join('');
+
+        // Goals Tags
+        const goalsHTML = item.goals.map(g => {
+          return `<span class="bg-brand-50 text-brand-700 font-medium text-[10px] px-2 py-0.5 rounded-full border border-brand-200/60">${g}</span>`;
+        }).join('');
+
+        // Gender Badge
+        let genderBadge = '';
+        if (item.gender === 'F') {
+          genderBadge = `<span class="bg-pink-100 text-pink-700 text-[10px] font-bold px-2 py-0.5 rounded-full"><i class="fa-solid fa-venus"></i> 限女生</span>`;
+        } else if (item.gender === 'M') {
+          genderBadge = `<span class="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full"><i class="fa-solid fa-mars"></i> 限男生</span>`;
+        }
+
+        const card = document.createElement('div');
+        card.className = "bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition duration-200 flex flex-col justify-between overflow-hidden group";
+
+        card.innerHTML = `
+          <div class="p-5 flex-1">
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <span class="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-lg">${item.dept}</span>
+              <div class="flex items-center space-x-1">
+                ${genderBadge}
+                <span class="text-[11px] text-slate-500"><i class="fa-regular fa-clock"></i> ${item.time}</span>
+              </div>
+            </div>
+
+            <h4 class="font-bold text-base text-slate-900 mb-2 group-hover:text-brand-600 transition">
+              ${item.title}
+            </h4>
+
+            <p class="text-xs text-slate-600 mb-3 line-clamp-2">
+              <strong class="text-slate-700">對象：</strong>${item.target}
+            </p>
+
+            <div class="mb-3">
+              <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">培訓目標</span>
+              <div class="flex flex-wrap gap-1">
+                ${goalsHTML}
+              </div>
+            </div>
+
+            <div class="mb-2">
+              <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">適用年級</span>
+              <div class="flex flex-wrap gap-1">
+                ${gradesHTML}
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-slate-50 border-t border-slate-100 px-5 py-3 flex items-center justify-between gap-2">
+            <button onclick="openDetailModal(${item.id})" class="text-xs font-semibold text-brand-600 hover:text-brand-800 transition flex items-center gap-1">
+              <i class="fa-solid fa-circle-info"></i> 詳細內容
+            </button>
+
+            <button onclick="toggleShortlist(${item.id})" class="${isShortlisted ? 'bg-amber-500 text-slate-900 font-bold' : 'bg-slate-200 hover:bg-slate-300 text-slate-700'} text-xs px-3 py-1.5 rounded-xl transition flex items-center space-x-1">
+              <i class="fa-solid ${isShortlisted ? 'fa-check' : 'fa-plus'}"></i>
+              <span>${isShortlisted ? '已挑選' : '挑選'}</span>
+            </button>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('table-body');
+      tbody.innerHTML = '';
+
+      currentFiltered.forEach(item => {
+        const isShortlisted = shortlist.includes(item.id);
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
+
+        const checkGrade = (g) => item.grades.includes(g) ? '<span class="text-emerald-600 font-bold">✔</span>' : '<span class="text-slate-300">-</span>';
+
+        tr.innerHTML = `
+          <td class="px-4 py-3 font-semibold text-slate-600">${item.dept}</td>
+          <td class="px-4 py-3 font-bold text-slate-900">${item.title}</td>
+          <td class="px-4 py-3 text-slate-600">${item.target}</td>
+          <td class="px-2 py-3 text-center">${checkGrade('S1')}</td>
+          <td class="px-2 py-3 text-center">${checkGrade('S2')}</td>
+          <td class="px-2 py-3 text-center">${checkGrade('S3')}</td>
+          <td class="px-2 py-3 text-center">${checkGrade('S4')}</td>
+          <td class="px-2 py-3 text-center">${checkGrade('S5')}</td>
+          <td class="px-2 py-3 text-center">${checkGrade('S6')}</td>
+          <td class="px-4 py-3 text-slate-600 whitespace-nowrap">${item.time}</td>
+          <td class="px-4 py-3">
+            <span class="bg-brand-50 text-brand-700 font-medium text-[10px] px-2 py-0.5 rounded-full border border-brand-200/60 whitespace-nowrap">
+              ${item.goals.join(' / ')}
+            </span>
+          </td>
+          <td class="px-4 py-3 text-center space-x-1 whitespace-nowrap">
+            <button onclick="openDetailModal(${item.id})" class="bg-slate-100 hover:bg-slate-200 text-slate-700 p-1.5 rounded-lg transition" title="詳情">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+            <button onclick="toggleShortlist(${item.id})" class="${isShortlisted ? 'bg-amber-500 text-slate-900 font-bold' : 'bg-slate-200 text-slate-700'} p-1.5 rounded-lg transition" title="挑選">
+              <i class="fa-solid ${isShortlisted ? 'fa-check' : 'fa-plus'}"></i>
+            </button>
+          </td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Switch View Engine
+    function switchView(mode) {
+      currentViewMode = mode;
+      const btnCard = document.getElementById('btn-view-card');
+      const btnTable = document.getElementById('btn-view-table');
+
+      if (mode === 'card') {
+        btnCard.className = "px-3 py-1 rounded-lg text-xs font-medium bg-white text-slate-800 shadow-sm transition";
+        btnTable.className = "px-3 py-1 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition";
+      } else {
+        btnTable.className = "px-3 py-1 rounded-lg text-xs font-medium bg-white text-slate-800 shadow-sm transition";
+        btnCard.className = "px-3 py-1 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition";
+      }
+
+      renderCurrentView();
+    }
+
+    function openDetailModal(id) {
+      const item = activitiesData.find(a => a.id === id);
+      if (!item) return;
+
+      currentSelectedId = id;
+
+      document.getElementById('modal-dept-badge').innerText = item.deptFull || item.dept;
+      document.getElementById('modal-title').innerText = item.title;
+      document.getElementById('modal-time-subtitle').innerText = `推行時間：${item.time}`;
+      document.getElementById('modal-target').innerText = item.target;
+      document.getElementById('modal-purpose').innerText = item.purpose;
+      document.getElementById('modal-content').innerText = item.content;
+
+      // Modal Grades
+      const gradesContainer = document.getElementById('modal-grades');
+      gradesContainer.innerHTML = item.grades.map(g => `<span class="bg-slate-200 text-slate-800 text-xs font-bold px-2 py-0.5 rounded-lg">${g.replace('S', '中')}</span>`).join(' ');
+
+      // Modal Goals
+      const goalsContainer = document.getElementById('modal-goals');
+      goalsContainer.innerHTML = item.goals.map(g => `<span class="bg-brand-100 text-brand-800 text-xs font-bold px-2.5 py-1 rounded-full">${g}</span>`).join(' ');
+
+      // Modal Traits
+      const traitsContainer = document.getElementById('modal-traits');
+      traitsContainer.innerHTML = item.traits.map(t => `<span class="bg-amber-100 text-amber-900 text-xs font-semibold px-2.5 py-1 rounded-lg">${t}</span>`).join(' ');
+
+      // Update Modal Shortlist Button
+      updateModalShortlistBtn();
+
+      // Show Modal
+      document.getElementById('detail-modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('detail-modal').classList.add('hidden');
+    }
+
+    function updateModalShortlistBtn() {
+      const btn = document.getElementById('modal-shortlist-btn');
+      const isShortlisted = shortlist.includes(currentSelectedId);
+
+      if (isShortlisted) {
+        btn.className = "bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-1.5";
+        btn.innerHTML = `<i class="fa-solid fa-check"></i><span>已加入挑選清單</span>`;
+      } else {
+        btn.className = "bg-amber-500 hover:bg-amber-600 text-slate-900 text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-1.5";
+        btn.innerHTML = `<i class="fa-solid fa-plus"></i><span>加入挑選清單</span>`;
+      }
+    }
+
+    function toggleCurrentShortlist() {
+      if (currentSelectedId) {
+        toggleShortlist(currentSelectedId);
+        updateModalShortlistBtn();
+      }
+    }
+
+    function toggleShortlist(id) {
+      const idx = shortlist.indexOf(id);
+      if (idx > -1) {
+        shortlist.splice(idx, 1);
+      } else {
+        shortlist.push(id);
+      }
+
+      // Update Badge
+      document.getElementById('shortlist-badge').innerText = shortlist.length;
+
+      renderCurrentView();
+      renderShortlistModalItems();
+    }
+
+    function toggleShortlistModal() {
+      const modal = document.getElementById('shortlist-modal');
+      modal.classList.toggle('hidden');
+      renderShortlistModalItems();
+    }
+
+    function renderShortlistModalItems() {
+      const listContainer = document.getElementById('shortlist-items-list');
+      const emptyState = document.getElementById('shortlist-empty');
+
+      if (shortlist.length === 0) {
+        listContainer.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      listContainer.innerHTML = '';
+
+      shortlist.forEach(id => {
+        const item = activitiesData.find(a => a.id === id);
+        if (!item) return;
+
+        const div = document.createElement('div');
+        div.className = "bg-slate-50 border border-slate-200 p-3.5 rounded-xl flex items-center justify-between gap-3 text-xs";
+        div.innerHTML = `
+          <div>
+            <div class="flex items-center space-x-2 mb-1">
+              <span class="bg-brand-100 text-brand-800 font-bold px-2 py-0.5 rounded">${item.dept}</span>
+              <span class="font-bold text-slate-900 text-sm">${item.title}</span>
+            </div>
+            <p class="text-slate-600"><strong class="text-slate-700">對象：</strong>${item.target} | <strong class="text-slate-700">時間：</strong>${item.time}</p>
+          </div>
+          <button onclick="toggleShortlist(${item.id})" class="text-rose-500 hover:text-rose-700 p-2 font-bold text-sm" title="移除">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        `;
+        listContainer.appendChild(div);
+      });
+    }
+
+    function clearShortlist() {
+      shortlist = [];
+      document.getElementById('shortlist-badge').innerText = 0;
+      renderCurrentView();
+      renderShortlistModalItems();
+    }
+
+    // Apply Quick Presets
+    function applyPreset(presetKey) {
+      resetFilters(false); // Reset first without full re-render
+
+      if (presetKey === 's1_discipline') {
+        document.querySelector('input[value="S1"]').checked = true;
+        document.getElementById('goal-select').value = '紀律訓練';
+      } else if (presetKey === 'non_chinese') {
+        document.getElementById('trait-select').value = '非華語/少數族裔';
+      } else if (presetKey === 'mental_health') {
+        document.getElementById('trait-select').value = '心靈/精神健康';
+      } else if (presetKey === 'leaders') {
+        document.getElementById('trait-select').value = '選拔/推薦領袖';
+      } else if (presetKey === 'adventure') {
+        document.getElementById('trait-select').value = '戶外/歷奇挑戰';
+      } else if (presetKey === 'all_school') {
+        document.getElementById('trait-select').value = '全體學生';
+      }
+
+      filterData();
+    }
+
+    function resetFilters(shouldRender = true) {
+      document.querySelectorAll('.grade-checkbox').forEach(cb => cb.checked = false);
+      document.getElementById('gender-select').value = 'ALL';
+      document.getElementById('trait-select').value = 'ALL';
+      document.getElementById('goal-select').value = 'ALL';
+      document.getElementById('dept-select').value = 'ALL';
+      document.getElementById('keyword-input').value = '';
+      document.getElementById('sort-select').value = 'default';
+
+      if (shouldRender) {
+        filterData();
+      }
+    }
+  </script>
+
+</body>
+</html>
